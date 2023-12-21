@@ -11,7 +11,17 @@ address[] public tokenAddresses;
 address[] public tokenPriceFeedAddresses;
 address[] tokenLockersAddress;
 
+enum TransactionStatus {
+  pending,
+  accepted,
+  rejected
+}
+
+TransactionStatus transactionStatus;
+
+mapping(address => TransactionStatus) secondaryUserToTransactionStatus;
 mapping(address =>mapping(address => uint256)) addressToTokenBalance;
+mapping(address =>mapping(address =>uint256)) addressToTokenLimit;
 mapping(address =>mapping(address => uint256)) addresstoTokenLocked;
 mapping(address =>mapping(address => uint256)) addresstoTokenLockedTime;
 
@@ -23,12 +33,17 @@ error withdrawalFailed();
 error needsMoreThanZero();
 error InsufficientBalance();
 error youCantWithdrawTokenYet();
+error sendTokenFailed();
+//error invalidIndexedPassed();
+error secondaryUserRejectedTheTransaction();
+error functionTimeOut();
+error amountHasExceededLimit();
 
 /********EVENTS */
 event accountFunded(address indexed user,address indexed tokenFunded,uint256 indexed amountFunded) ;
 event tokenWithdrawn(address indexed user, address indexed tokenWithdrawn, uint256 indexed amount);
 event tokenWithdrawnFromLock(address indexed user, address indexed tokenWithdrawn, uint256 indexed amountWithdrawn, uint256 timeOfWithdrawal);
-
+event swapTokenFunctionHasBeenInitiated(address indexed caller, address indexed userTwo, uint256  callerAmount, uint256  userTwoAmount, address  callerTokenAddress, address  userTwoTokenAddress);
 
 address public owner ;
 
@@ -111,7 +126,53 @@ function withdrawLockedTokens(address tokenToWithdraw)  public {
 /**may be removed */
 function AutoBuyTokens() public {}    
 
-function swapTokens() public {}
+
+// one person swapping will input the amounts and the other person would accept the transaction
+//check if the person calling the confirm transaction is the second user inputed in the contract
+function swapTokens(uint256 callerAmount, uint256 userTwoAmount, address callerTokenAddress,address userTwoTokenAddress, address userTwo) public {
+emit swapTokenFunctionHasBeenInitiated(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
+uint256 timeOfFunctionCall = block.timestamp;
+if( _secondUserConfirmTransaction(1,userTwo)) {
+addressToTokenBalance[msg.sender][callerTokenAddress] -= callerAmount;
+addressToTokenBalance[userTwo][userTwoTokenAddress] -= userTwoAmount;
+addressToTokenBalance[msg.sender][userTwoTokenAddress] += userTwoAmount;
+addressToTokenBalance[userTwo][callerTokenAddress] += callerAmount;
+}
+else if (_secondUserConfirmTransaction(0,userTwo)) {
+  revert secondaryUserRejectedTheTransaction();
+}
+else if( block.timestamp > timeOfFunctionCall + 15 minutes) {
+revert functionTimeOut();
+
+}
+else {
+  revert secondaryUserRejectedTheTransaction();
+}
+}
+
+function _secondUserConfirmTransaction(uint256 index, address userTwo) internal  returns(bool) {
+  require(userTwo == msg.sender,"only the second user can call this function");
+   if(index == 1) {
+    secondaryUserToTransactionStatus[msg.sender] = TransactionStatus.accepted;
+    return true;
+   }
+   else  {
+    secondaryUserToTransactionStatus[msg.sender] = TransactionStatus.rejected;
+    return false;
+   }
+ 
+}
+
+function _sendToken(address tokenAddress, uint256 amount, address recepient) internal moreThanZero(amount) returns(bool) {
+activateDailySpendingLimit(tokenAddress,amount);
+IERC20(tokenAddress).approve(address(this),amount);
+bool _sendTokenSuccessful = IERC20(tokenAddress).transferFrom(msg.sender,recepient,amount);
+if(!_sendTokenSuccessful) {
+  revert sendTokenFailed();
+}else {
+ return true;
+}
+}
 
 function createBudget() public {}
 
@@ -119,6 +180,18 @@ function addTokenAndTokenPriceFeedAddress(address tokenAddress, address tokenPri
  tokenAddresses.push(tokenAddress);
  tokenPriceFeedAddresses.push(tokenPriceFeedAddress);
 
+}
+
+function activateDailySpendingLimit(address tokenAddress,uint256 amount) public {
+(uint256 tokenLimit) = _addToDailySpendingLimit(tokenAddress,amount);
+if (amount > tokenLimit) {
+  revert amountHasExceededLimit();
+}
+}
+
+function _addToDailySpendingLimit(address tokenAddress, uint256 amount) internal onlyOwner returns(uint256){
+uint256 tokenLimit = addressToTokenLimit[msg.sender][tokenAddress] = amount;
+return tokenLimit;
 }
 
 }

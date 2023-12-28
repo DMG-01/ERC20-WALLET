@@ -1,16 +1,17 @@
 //SPDX-License-Identifier:MIT
 // code allows user to put their token in the contract as a wallet and trade them p2p
+// this is a wallet that allows use to have multiple ERC20 token and they can send,lock and even swap tokens p2p
 pragma solidity ^0.8.0;
-
+//standard ERC20 token is being installed from openZeppelin
 import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 
 contract Wallet {
-
+// an array to store the token addresses and the token pricefeed addresses
 address[] public tokenAddresses;
 address[] public tokenPriceFeedAddresses;
-address[] tokenLockersAddress;
 
+// this enum called TransactionStatus is used to store the status of a transaction when a user intends to swap p2p it includes pending,accepted and rejected
 enum TransactionStatus {
   pending,
   accepted,
@@ -19,13 +20,21 @@ enum TransactionStatus {
 
 TransactionStatus transactionStatus;
 
+/* a group of mapping with address as key 
+  * the first mapping issecondary user to transaction status
+  *the second mapping is user to their token balances
+  *the third is user to their individual token transfer limit
+  *the fourth is user to their locked token
+  * and the fourth is user to the time of their token unlock time 
+ */
 mapping(address => TransactionStatus) secondaryUserToTransactionStatus;
 mapping(address =>mapping(address => uint256)) addressToTokenBalance;
 mapping(address =>mapping(address =>uint256)) addressToTokenLimit;
 mapping(address =>mapping(address => uint256)) addresstoTokenLocked;
 mapping(address =>mapping(address => uint256)) addresstoTokenLockedTime;
+mapping(address =>mapping(address => uint256)) addressToTokenTimeInterval;
 
-
+/* List of all custom error */
 error onlyOwnerCanCallThisFunction();
 error tokenNotAllowed();
 error fundAccountFailed();
@@ -44,7 +53,7 @@ event accountFunded(address indexed user,address indexed tokenFunded,uint256 ind
 event tokenWithdrawn(address indexed user, address indexed tokenWithdrawn, uint256 indexed amount);
 event tokenWithdrawnFromLock(address indexed user, address indexed tokenWithdrawn, uint256 indexed amountWithdrawn, uint256 timeOfWithdrawal);
 event swapTokenFunctionHasBeenInitiated(address indexed caller, address indexed userTwo, uint256  callerAmount, uint256  userTwoAmount, address  callerTokenAddress, address  userTwoTokenAddress);
-
+event tokenSwapSuccessful(address indexed caller, address indexed userTwo, uint256  callerAmount, uint256  userTwoAmount, address  callerTokenAddress, address  userTwoTokenAddress);
 address public owner ;
 
 modifier onlyOwner() {
@@ -124,8 +133,8 @@ function withdrawLockedTokens(address tokenToWithdraw)  public {
   }
 }
 /**may be removed */
-function AutoBuyTokens() public {}    
 
+    
 
 // one person swapping will input the amounts and the other person would accept the transaction
 //check if the person calling the confirm transaction is the second user inputed in the contract
@@ -137,6 +146,7 @@ addressToTokenBalance[msg.sender][callerTokenAddress] -= callerAmount;
 addressToTokenBalance[userTwo][userTwoTokenAddress] -= userTwoAmount;
 addressToTokenBalance[msg.sender][userTwoTokenAddress] += userTwoAmount;
 addressToTokenBalance[userTwo][callerTokenAddress] += callerAmount;
+emit tokenSwapSuccessful(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
 }
 else if (_secondUserConfirmTransaction(0,userTwo)) {
   revert secondaryUserRejectedTheTransaction();
@@ -164,7 +174,7 @@ function _secondUserConfirmTransaction(uint256 index, address userTwo) internal 
 }
 
 function _sendToken(address tokenAddress, uint256 amount, address recepient) internal moreThanZero(amount) returns(bool) {
-activateDailySpendingLimit(tokenAddress,amount);
+SpendingLimit(tokenAddress,amount);
 IERC20(tokenAddress).approve(address(this),amount);
 bool _sendTokenSuccessful = IERC20(tokenAddress).transferFrom(msg.sender,recepient,amount);
 if(!_sendTokenSuccessful) {
@@ -181,8 +191,7 @@ function addTokenAndTokenPriceFeedAddress(address tokenAddress, address tokenPri
  tokenPriceFeedAddresses.push(tokenPriceFeedAddress);
 
 }
-
-function activateDailySpendingLimit(address tokenAddress,uint256 amount) public {
+function SpendingLimit(address tokenAddress,uint256 amount) public {
 (uint256 tokenLimit) = _addToDailySpendingLimit(tokenAddress,amount);
 if (amount > tokenLimit) {
   revert amountHasExceededLimit();

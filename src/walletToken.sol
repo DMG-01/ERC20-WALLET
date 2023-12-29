@@ -4,12 +4,12 @@
 pragma solidity ^0.8.0;
 //standard ERC20 token is being installed from openZeppelin
 import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {AggregatorV3Interface} from "lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 
 contract Wallet {
 // an array to store the token addresses and the token pricefeed addresses
-address[] public tokenAddresses;
-address[] public tokenPriceFeedAddresses;
+
 
 // this enum called TransactionStatus is used to store the status of a transaction when a user intends to swap p2p it includes pending,accepted and rejected
 enum TransactionStatus {
@@ -19,6 +19,15 @@ enum TransactionStatus {
 }
 
 TransactionStatus transactionStatus;
+
+struct transactionDetails {
+  address recepient ;
+  uint256 amount ;
+  uint256 time;
+}
+
+uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
+uint256 private constant PRECISION = 1e18;
 
 /* a group of mapping with address as key 
   * the first mapping issecondary user to transaction status
@@ -33,7 +42,9 @@ mapping(address =>mapping(address =>uint256)) addressToTokenLimit;
 mapping(address =>mapping(address => uint256)) addresstoTokenLocked;
 mapping(address =>mapping(address => uint256)) addresstoTokenLockedTime;
 mapping(address =>mapping(address => uint256)) addressToTokenTimeInterval;
-
+mapping (address => address) tokenAddressToPriceFeedAddress;
+mapping(address => mapping(address => uint256)) addressToTokenIn;
+mapping(address => mapping(address => uint256)) addressToTokenOut;
 /* List of all custom error */
 error onlyOwnerCanCallThisFunction();
 error tokenNotAllowed();
@@ -47,6 +58,8 @@ error sendTokenFailed();
 error secondaryUserRejectedTheTransaction();
 error functionTimeOut();
 error amountHasExceededLimit();
+error priceFeedAddressesDoesntEqualTokenAddresses();
+error invalidToken();
 
 /********EVENTS */
 event accountFunded(address indexed user,address indexed tokenFunded,uint256 indexed amountFunded) ;
@@ -54,6 +67,7 @@ event tokenWithdrawn(address indexed user, address indexed tokenWithdrawn, uint2
 event tokenWithdrawnFromLock(address indexed user, address indexed tokenWithdrawn, uint256 indexed amountWithdrawn, uint256 timeOfWithdrawal);
 event swapTokenFunctionHasBeenInitiated(address indexed caller, address indexed userTwo, uint256  callerAmount, uint256  userTwoAmount, address  callerTokenAddress, address  userTwoTokenAddress);
 event tokenSwapSuccessful(address indexed caller, address indexed userTwo, uint256  callerAmount, uint256  userTwoAmount, address  callerTokenAddress, address  userTwoTokenAddress);
+event etherHasBeenTransfered(address indexed recepient, uint256 amount, uint256 time);
 address public owner ;
 
 modifier onlyOwner() {
@@ -70,8 +84,29 @@ modifier moreThanZero(uint256 amount) {
     _;
 }
 
+modifier isAllowedToken(address token) {
+  if(tokenAddressToPriceFeedAddress[token] == address(0)) {
+    revert invalidToken();
+  }
+  _;
+}
+
+
+
 constructor() {
     owner = msg.sender;
+    address[] memory  tokenPriceFeedAddresses;
+    address[] memory tokenAddresses;
+
+    if(tokenPriceFeedAddresses.length != tokenAddresses.length) {
+      revert priceFeedAddressesDoesntEqualTokenAddresses();
+    }
+    else {
+             for(uint256 index;index< tokenAddresses.length;index++) {
+              tokenAddressToPriceFeedAddress[tokenAddresses[index]] = tokenPriceFeedAddresses[index];
+             }
+    }
+
     }
 
 
@@ -79,7 +114,7 @@ function signer() public {}
 
 function generateAddressAndPrivateKey() public {}
 
-function fundAccount(address token, uint256 amount) public moreThanZero(amount) returns(bool) {
+function fundAccount(address token, uint256 amount) public moreThanZero(amount) isAllowedToken(token) returns(bool) {
       require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
       addressToTokenBalance[msg.sender][token] += amount;
       bool success = IERC20(token).transferFrom(msg.sender, address(this), amount);
@@ -91,7 +126,7 @@ function fundAccount(address token, uint256 amount) public moreThanZero(amount) 
  } 
 }
 
-function withdraw(address token, uint256 amount) public moreThanZero(amount) returns(bool){
+function withdraw(address token, uint256 amount) public moreThanZero(amount) isAllowedToken(token) returns(bool){
       addressToTokenBalance[msg.sender][token] -= amount;
       bool success = IERC20(token).transfer(msg.sender, amount);
       emit tokenWithdrawn(msg.sender, token, amount);
@@ -104,11 +139,11 @@ function withdraw(address token, uint256 amount) public moreThanZero(amount) ret
 
 function sendTokenToSameWalletUsers() public{}
 
-function getUserTokenBalance(address token) public view returns(uint256) {
+function getUserTokenBalance(address token) public isAllowedToken(token) view returns(uint256) {
     uint256 tokenBalance = addressToTokenBalance[msg.sender][token];
     return tokenBalance;
 }
-function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock) moreThanZero(amountToLock) public {
+function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock) moreThanZero(amountToLock) isAllowedToken(tokenToLock) public {
     if(amountToLock < addressToTokenBalance[msg.sender][tokenToLock]){
         revert InsufficientBalance();
     }else {
@@ -121,7 +156,7 @@ function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock)
 //remove from locked mapping
 //add to contract wallet
 // add REENTRANCY
-function withdrawLockedTokens(address tokenToWithdraw)  public {
+function withdrawLockedTokens(address tokenToWithdraw)  public isAllowedToken(tokenToWithdraw)  {
   uint256 lockedBalance = addresstoTokenLocked[msg.sender][tokenToWithdraw];
   if (block.timestamp > (addresstoTokenLockedTime[msg.sender][tokenToWithdraw])){
     addresstoTokenLocked[msg.sender][tokenToWithdraw] = 0;
@@ -146,7 +181,10 @@ addressToTokenBalance[msg.sender][callerTokenAddress] -= callerAmount;
 addressToTokenBalance[userTwo][userTwoTokenAddress] -= userTwoAmount;
 addressToTokenBalance[msg.sender][userTwoTokenAddress] += userTwoAmount;
 addressToTokenBalance[userTwo][callerTokenAddress] += callerAmount;
+addressToTokenIn[msg.sender][userTwoTokenAddress] += userTwoAmount;
+addressToTokenOut[msg.sender][callerTokenAddress] += callerAmount;
 emit tokenSwapSuccessful(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
+
 }
 else if (_secondUserConfirmTransaction(0,userTwo)) {
   revert secondaryUserRejectedTheTransaction();
@@ -185,12 +223,12 @@ if(!_sendTokenSuccessful) {
 }
 
 function createBudget() public {}
-
-function addTokenAndTokenPriceFeedAddress(address tokenAddress, address tokenPriceFeedAddress) public  {
- tokenAddresses.push(tokenAddress);
- tokenPriceFeedAddresses.push(tokenPriceFeedAddress);
-
+/*
+function addTokenAndTokenPriceFeedAddress(address _tokenAddress, address _tokenPriceFeedAddress) public  {
+tokenPriceFeedAddresses.push(_tokenPriceFeedAddress);
+tokenAddresses.push(_tokenAddress);
 }
+*/
 function SpendingLimit(address tokenAddress,uint256 amount) public {
 (uint256 tokenLimit) = _addToDailySpendingLimit(tokenAddress,amount);
 if (amount > tokenLimit) {
@@ -203,4 +241,26 @@ uint256 tokenLimit = addressToTokenLimit[msg.sender][tokenAddress] = amount;
 return tokenLimit;
 }
 
+function getTokenAmountInUsd(address token, uint256 Amount) isAllowedToken(token) public view returns(uint256){
+AggregatorV3Interface priceFeed = AggregatorV3Interface(tokenAddressToPriceFeedAddress[token]);
+(,int256 price,,,) = priceFeed.latestRoundData();
+return ((uint256 (price) * ADDITIONAL_FEED_PRECISION) * Amount)/PRECISION;
+
+}
+
+function sendEther(address payable recepient) payable public {
+  recepient.transfer(msg.value);
+emit etherHasBeenTransfered(recepient,msg.value,block.timestamp);
+}
+
+
+function getUserEtherBalance() public view returns(uint256) {
+  return msg.sender.balance;
+}
+
+function getToTalInAndOutOfToken(address token) public view returns(uint256, uint256) {
+ uint256 totalIn = addressToTokenIn[msg.sender][token];
+ uint256 totalOut = addressToTokenOut[msg.sender][token];
+ return(totalIn,totalOut);
+}
 }

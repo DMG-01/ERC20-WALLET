@@ -6,7 +6,6 @@ pragma solidity ^0.8.0;
 import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {AggregatorV3Interface} from "lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-
 contract Wallet {
 // an array to store the token addresses and the token pricefeed addresses
 
@@ -93,11 +92,12 @@ modifier isAllowedToken(address token) {
 
 
 
-constructor() {
-    owner = msg.sender;
-    address[] memory  tokenPriceFeedAddresses;
-    address[] memory tokenAddresses;
-
+constructor(
+    address[] memory  tokenPriceFeedAddresses,
+    address[] memory tokenAddresses  
+)
+{
+  owner = msg.sender;
     if(tokenPriceFeedAddresses.length != tokenAddresses.length) {
       revert priceFeedAddressesDoesntEqualTokenAddresses();
     }

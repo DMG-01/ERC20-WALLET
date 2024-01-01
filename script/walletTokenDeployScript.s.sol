@@ -3,14 +3,24 @@ pragma solidity ^0.8.0;
 
 import {Script} from "forge-std/Script.sol";
 import {Wallet} from "src/walletToken.sol";
+import {HelperConfig} from "script/helperConfig.sol";
 
 contract deployWallet is Script{
 
-function run() external returns(Wallet){
+address[] tokenAddresses;
+address[] tokenPriceFeedAddresses;
+
+function run() external returns(Wallet,HelperConfig){
     
+    HelperConfig helperConfig = new HelperConfig();
+    (address wethUsdPriceFeedAddress, address wbtcUsdPriceFeedAddress, address wethAddress, address wbtcAddress) = helperConfig.activeNetworkConfig();
+    
+    tokenAddresses = [wethAddress, wbtcAddress];
+    tokenPriceFeedAddresses = [wethUsdPriceFeedAddress, wbtcUsdPriceFeedAddress];
+
     vm.startBroadcast();
-    Wallet wallet =new Wallet();
+    Wallet wallet =new Wallet(tokenPriceFeedAddresses, tokenAddresses);
     vm.stopBroadcast();
-    return(wallet);
+    return(wallet,helperConfig );
 }
 }

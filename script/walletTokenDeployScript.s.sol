@@ -1,5 +1,5 @@
 //SPDX-License-Identifier:MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
 import {Script} from "forge-std/Script.sol";
 import {Wallet} from "src/walletToken.sol";
@@ -13,14 +13,14 @@ address[] tokenPriceFeedAddresses;
 function run() external returns(Wallet,HelperConfig){
     
     HelperConfig helperConfig = new HelperConfig();
-    (address wethUsdPriceFeedAddress, address wbtcUsdPriceFeedAddress, address wethAddress, address wbtcAddress) = helperConfig.activeNetworkConfig();
+    (address wethUsdPriceFeedAddress, address wbtcUsdPriceFeedAddress, address wethAddress, address wbtcAddress, uint256 deployerKey) = helperConfig.activeNetworkConfig();
     
     tokenAddresses = [wethAddress, wbtcAddress];
     tokenPriceFeedAddresses = [wethUsdPriceFeedAddress, wbtcUsdPriceFeedAddress];
 
-    vm.startBroadcast();
+    vm.startBroadcast(deployerKey);
     Wallet wallet =new Wallet(tokenPriceFeedAddresses, tokenAddresses);
     vm.stopBroadcast();
-    return(wallet,helperConfig );
-}
+    return(wallet,helperConfig);
+ }
 }

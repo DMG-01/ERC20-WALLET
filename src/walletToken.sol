@@ -114,8 +114,21 @@ function signer() public {}
 
 function generateAddressAndPrivateKey() public {}
 
+function depositCollateral(address token,uint256 amount) public moreThanZero(amount)  isAllowedToken(token)  /*nonReentrant()*/ returns(bool){
+    addressToTokenBalance[msg.sender][token] += amount;
+    //emit collateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
+    bool success = IERC20(token).transferFrom(msg.sender,address(this),amount);
+
+    if(!success){
+        revert fundAccountFailed();
+    }
+    else {
+        return true;
+    }
+    }
+
 function fundAccount(address token, uint256 amount) public moreThanZero(amount) isAllowedToken(token) returns(bool) {
-      require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
+     // require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
       addressToTokenBalance[msg.sender][token] += amount;
       bool success = IERC20(token).transferFrom(msg.sender, address(this), amount);
       emit accountFunded(msg.sender,token,amount);

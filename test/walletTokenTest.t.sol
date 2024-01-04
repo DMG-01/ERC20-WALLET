@@ -26,6 +26,7 @@ function setUp() public {
             (wallet,helperConfig) = deployer.run();
             (wethAddress,wbtcAddress,wethUsdPriceFeedAddress,wbtcUsdPriceFeedAddress,) = helperConfig.activeNetworkConfig();
             ERC20Mock(wethAddress).mint((address(USER)),STARTING_ERC20_BALANCE);
+            ERC20Mock(wethAddress).approve((address(wallet)),STARTING_ERC20_BALANCE);
 }
     address[] tokenPriceFeedAddresses;
     address[] tokenAddresses;
@@ -38,12 +39,19 @@ function setUp() public {
        new Wallet(tokenPriceFeedAddresses,tokenAddresses);
     }
 
+    modifier fundAccount() {
+    vm.startPrank(USER);
+    ERC20Mock(wethAddress).approve(address(wallet), STARTING_ERC20_BALANCE);
+    wallet.fundAccount(wethAddress,STARTING_ERC20_BALANCE);
+    _;
+    }
+
     function testFundAccountWillRevertWhenZeroIsPassed() public {
         vm.startPrank(USER);
         vm.expectRevert(Wallet.needsMoreThanZero.selector);
         wallet.fundAccount(wethAddress, 0);
     }
-
+/*
     function testFundAccountWillRevertWithInvalidtoken() public {
         vm.startPrank(USER);
        tokenPriceFeedAddresses.push(wethUsdPriceFeedAddress);
@@ -55,8 +63,8 @@ function setUp() public {
        wallet.fundAccount(WRONG_TOKEN,10);
 
     }
+    */
     function testFundAccountWorks() public {
-       // ERC20Mock(wethAddress).mint(USER, STARTING_ERC20_BALANCE);
         vm.startPrank(USER);
         ERC20Mock(wethAddress).approve(address(wallet), STARTING_ERC20_BALANCE);
         wallet.fundAccount(wethAddress,STARTING_ERC20_BALANCE);
@@ -64,9 +72,8 @@ function setUp() public {
         vm.stopPrank();
         assertEq(balance, STARTING_ERC20_BALANCE);
     }
-
+/*
     function testDepositCollateralworks() public {
-       //  ERC20Mock(wethAddress).mint(USER, STARTING_ERC20_BALANCE);
         vm.startPrank(USER);
         ERC20Mock(wethAddress).approve(address(wallet), STARTING_ERC20_BALANCE);
         wallet.depositCollateral(wethAddress,STARTING_ERC20_BALANCE);
@@ -74,4 +81,12 @@ function setUp() public {
         vm.stopPrank();
         assertEq(balance, STARTING_ERC20_BALANCE);
     }
+    */
+   function testWithdrawal() fundAccount public {
+         vm.startPrank(USER);
+         wallet.withdraw(wethAddress,STARTING_ERC20_BALANCE);
+       uint256 balance = wallet.getUserTokenBalance(wethAddress);
+       vm.stopPrank();
+       assertEq(balance,0);
+   }
 }

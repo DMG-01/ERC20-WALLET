@@ -96,9 +96,9 @@ function setUp() public {
         assertEq(balance, STARTING_ERC20_BALANCE);
     }
     */
-   function testWithdrawal() fundAccountWithWeth public {
+   function testWithdrawal() fundAccountWithWbtc public {
          vm.startPrank(USER);
-         wallet.withdraw(wethAddress,STARTING_ERC20_BALANCE);
+         wallet.withdraw(wbtcAddress,STARTING_ERC20_BALANCE);
        uint256 balance = wallet.getUserTokenBalance(wethAddress);
        vm.stopPrank();
        assertEq(balance,0);
@@ -132,16 +132,13 @@ function setUp() public {
     assertEq(actualTokenBalance, 0);
    }
    // test multiple token
-   function testOneLockedTokenWontAffectAnother() fundAccountWithWbtc fundAccountWithWbtc public {
+   function testOneLockedTokenWontAffectAnother() fundAccountWithWeth fundAccountWithWbtc public {
        vm.startPrank(USER);
        wallet.lockTokens(wethAddress, STARTING_ERC20_BALANCE,LOCK_TIME);
        wallet.lockTokens(wbtcAddress, STARTING_ERC20_BALANCE, LOCK_TIME);
-       //uint256 actualLockedWethAmount = wallet.getUserLockTokenBalance(wethAddress);
       uint256 actualWethBalance = wallet.getUserTokenBalance(wethAddress);
        uint256 actualWbtcBalance = wallet.getUserTokenBalance(wbtcAddress);
-     //  uint256 actualWethTokenAmount = wallet.getUserLockTokenBalance(wethAddress);
        assertEq(actualWethBalance,actualWbtcBalance);
-      // assertEq(actualWbtcBalance,STARTING_ERC20_BALANCE);
-
+     
    }
 }

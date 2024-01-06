@@ -128,7 +128,7 @@ function depositCollateral(address token,uint256 amount) public moreThanZero(amo
     }
 */
 function fundAccount(address token, uint256 amount) public moreThanZero(amount)  returns(bool) {
-     // require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
+      require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
      // IERC20(token).approve(address(this), amount);
       addressToTokenBalance[msg.sender][token] += amount;
       bool success = IERC20(token).transferFrom(msg.sender, address(this), amount);
@@ -157,8 +157,8 @@ function getUserTokenBalance(address token) public /*isAllowedToken(token)*/ vie
     uint256 tokenBalance = addressToTokenBalance[msg.sender][token];
     return tokenBalance;
 }
-function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock) moreThanZero(amountToLock) isAllowedToken(tokenToLock) public {
-    if(amountToLock < addressToTokenBalance[msg.sender][tokenToLock]){
+function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock) moreThanZero(amountToLock) /*isAllowedToken(tokenToLock)*/ public {
+    if(amountToLock > addressToTokenBalance[msg.sender][tokenToLock]){
         revert InsufficientBalance();
     }else {
         addressToTokenBalance[msg.sender][tokenToLock] -= amountToLock;
@@ -167,10 +167,17 @@ function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock)
      
     }
 }
+function getUserLockTokenBalance(address token) public view returns(uint256) {
+  if(addresstoTokenLocked[msg.sender][token] == 0){
+    return 0;
+  }else {
+  return(addresstoTokenLocked[msg.sender][token]);
+}
+}
 //remove from locked mapping
 //add to contract wallet
 // add REENTRANCY
-function withdrawLockedTokens(address tokenToWithdraw)  public isAllowedToken(tokenToWithdraw)  {
+function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(tokenToWithdraw) */ {
   uint256 lockedBalance = addresstoTokenLocked[msg.sender][tokenToWithdraw];
   if (block.timestamp > (addresstoTokenLockedTime[msg.sender][tokenToWithdraw])){
     addresstoTokenLocked[msg.sender][tokenToWithdraw] = 0;

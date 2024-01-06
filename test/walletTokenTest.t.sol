@@ -16,8 +16,13 @@ contract walletTest is Test{
     address wbtcUsdPriceFeedAddress;
     address wethAddress;
     address wbtcAddress;
+
+
     address WRONG_TOKEN;
     uint256 constant STARTING_ERC20_BALANCE = 10 ether;
+    uint256 constant EXCESS_AMOUNT = 15 ether;
+    uint256 constant ALLOWED_AMOUNT = 20 ether;
+    uint256 constant LOCK_TIME = 10 days;
 
     address public USER = makeAddr("user");
 
@@ -26,7 +31,9 @@ function setUp() public {
             (wallet,helperConfig) = deployer.run();
             (wethAddress,wbtcAddress,wethUsdPriceFeedAddress,wbtcUsdPriceFeedAddress,) = helperConfig.activeNetworkConfig();
             ERC20Mock(wethAddress).mint((address(USER)),STARTING_ERC20_BALANCE);
+            ERC20Mock(wbtcAddress).mint((address(USER)),STARTING_ERC20_BALANCE);
             ERC20Mock(wethAddress).approve((address(wallet)),STARTING_ERC20_BALANCE);
+            ERC20Mock(wbtcAddress).approve((address(wallet)),STARTING_ERC20_BALANCE); 
 }
     address[] tokenPriceFeedAddresses;
     address[] tokenAddresses;
@@ -39,10 +46,17 @@ function setUp() public {
        new Wallet(tokenPriceFeedAddresses,tokenAddresses);
     }
 
-    modifier fundAccount() {
+    modifier fundAccountWithWeth() {
     vm.startPrank(USER);
-    ERC20Mock(wethAddress).approve(address(wallet), STARTING_ERC20_BALANCE);
+    ERC20Mock(wethAddress).approve(address(wallet), ALLOWED_AMOUNT);
     wallet.fundAccount(wethAddress,STARTING_ERC20_BALANCE);
+    _;
+    }
+    
+     modifier fundAccountWithWbtc() {
+    vm.startPrank(USER);
+    ERC20Mock(wbtcAddress).approve(address(wallet), ALLOWED_AMOUNT);
+    wallet.fundAccount(wbtcAddress,STARTING_ERC20_BALANCE);
     _;
     }
 
@@ -82,11 +96,52 @@ function setUp() public {
         assertEq(balance, STARTING_ERC20_BALANCE);
     }
     */
-   function testWithdrawal() fundAccount public {
+   function testWithdrawal() fundAccountWithWeth public {
          vm.startPrank(USER);
          wallet.withdraw(wethAddress,STARTING_ERC20_BALANCE);
        uint256 balance = wallet.getUserTokenBalance(wethAddress);
        vm.stopPrank();
        assertEq(balance,0);
+   }
+
+   function testWithdrawalRevertsWithZero() fundAccountWithWeth public {
+      vm.startPrank(USER);
+      vm.expectRevert(Wallet.needsMoreThanZero.selector);
+      wallet.withdraw(wethAddress,0);
+      vm.stopPrank();
+   }
+
+   function testWithdrawalRevertsWhenAmountIsMoreThanDeposit()  fundAccountWithWeth public {
+    vm.startPrank(USER);
+    vm.expectRevert();
+    wallet.fundAccount(wethAddress,EXCESS_AMOUNT);
+   } 
+
+   function testTokenWillRevertWithInSufficientFunds() public fundAccountWithWeth {
+    vm.startPrank(USER);
+    vm.expectRevert(Wallet.InsufficientBalance.selector);
+    wallet.lockTokens(wethAddress,EXCESS_AMOUNT,LOCK_TIME);
+   }
+
+   function testLockTokenWorks() fundAccountWithWeth public {
+    vm.startPrank(USER);
+    wallet.lockTokens(wethAddress,STARTING_ERC20_BALANCE, LOCK_TIME);
+    uint256 actualLockedTokenAmount = wallet.getUserLockTokenBalance(wethAddress);
+    uint256 actualTokenBalance = wallet.getUserTokenBalance(wethAddress);
+    assertEq(STARTING_ERC20_BALANCE,actualLockedTokenAmount);
+    assertEq(actualTokenBalance, 0);
+   }
+   // test multiple token
+   function testOneLockedTokenWontAffectAnother() fundAccountWithWbtc fundAccountWithWbtc public {
+       vm.startPrank(USER);
+       wallet.lockTokens(wethAddress, STARTING_ERC20_BALANCE,LOCK_TIME);
+       wallet.lockTokens(wbtcAddress, STARTING_ERC20_BALANCE, LOCK_TIME);
+       //uint256 actualLockedWethAmount = wallet.getUserLockTokenBalance(wethAddress);
+      uint256 actualWethBalance = wallet.getUserTokenBalance(wethAddress);
+       uint256 actualWbtcBalance = wallet.getUserTokenBalance(wbtcAddress);
+     //  uint256 actualWethTokenAmount = wallet.getUserLockTokenBalance(wethAddress);
+       assertEq(actualWethBalance,actualWbtcBalance);
+      // assertEq(actualWbtcBalance,STARTING_ERC20_BALANCE);
+
    }
 }

@@ -131,6 +131,7 @@ function fundAccount(address token, uint256 amount) public moreThanZero(amount) 
       require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
      // IERC20(token).approve(address(this), amount);
       addressToTokenBalance[msg.sender][token] += amount;
+      addressToTokenLimit[msg.sender][token] = 0;
       bool success = IERC20(token).transferFrom(msg.sender, address(this), amount);
       emit accountFunded(msg.sender,token,amount);
       if(!success) {
@@ -153,10 +154,6 @@ function withdraw(address token, uint256 amount) public moreThanZero(amount) /*i
 
 function sendTokenToSameWalletUsers() public{}
 
-function getUserTokenBalance(address token) public /*isAllowedToken(token)*/ view returns(uint256) {
-    uint256 tokenBalance = addressToTokenBalance[msg.sender][token];
-    return tokenBalance;
-}
 function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock) moreThanZero(amountToLock) /*isAllowedToken(tokenToLock)*/ public {
     if(amountToLock > addressToTokenBalance[msg.sender][tokenToLock]){
         revert InsufficientBalance();
@@ -167,13 +164,7 @@ function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock)
      
     }
 }
-function getUserLockTokenBalance(address token) public view returns(uint256) {
-  if(addresstoTokenLocked[msg.sender][token] == 0){
-    return 0;
-  }else {
-  return(addresstoTokenLocked[msg.sender][token]);
-}
-}
+
 //remove from locked mapping
 //add to contract wallet
 // add REENTRANCY
@@ -232,9 +223,9 @@ function _secondUserConfirmTransaction(uint256 index, address userTwo) internal 
  
 }
 
-function _sendToken(address tokenAddress, uint256 amount, address recepient) internal moreThanZero(amount) returns(bool) {
+function sendToken(address tokenAddress, uint256 amount, address recepient) public  moreThanZero(amount) returns(bool) {
 SpendingLimit(tokenAddress,amount);
-IERC20(tokenAddress).approve(address(this),amount);
+//IERC20(tokenAddress).approve(address(this),amount);
 bool _sendTokenSuccessful = IERC20(tokenAddress).transferFrom(msg.sender,recepient,amount);
 if(!_sendTokenSuccessful) {
   revert sendTokenFailed();
@@ -257,18 +248,15 @@ if (amount > tokenLimit) {
 }
 }
 
-function _addToDailySpendingLimit(address tokenAddress, uint256 amount) internal onlyOwner returns(uint256){
+function _addToDailySpendingLimit(address tokenAddress, uint256 amount) internal  returns(uint256){
 uint256 tokenLimit = addressToTokenLimit[msg.sender][tokenAddress] = amount;
 return tokenLimit;
 }
 
-function getTokenAmountInUsd(address token, uint256 Amount) isAllowedToken(token) public view returns(uint256){
-AggregatorV3Interface priceFeed = AggregatorV3Interface(tokenAddressToPriceFeedAddress[token]);
-(,int256 price,,,) = priceFeed.latestRoundData();
-return ((uint256 (price) * ADDITIONAL_FEED_PRECISION) * Amount)/PRECISION;
 
-}
-
+/*****************GETTER
+ *               FUNCTIONS
+ *******************************/
 function sendEther(address payable recepient) payable public {
   recepient.transfer(msg.value);
 emit etherHasBeenTransfered(recepient,msg.value,block.timestamp);
@@ -283,5 +271,26 @@ function getToTalInAndOutOfToken(address token) public view returns(uint256, uin
  uint256 totalIn = addressToTokenIn[msg.sender][token];
  uint256 totalOut = addressToTokenOut[msg.sender][token];
  return(totalIn,totalOut);
+}
+
+function getTokenAmountInUsd(address token, uint256 Amount) isAllowedToken(token) public view returns(uint256){
+AggregatorV3Interface priceFeed = AggregatorV3Interface(tokenAddressToPriceFeedAddress[token]);
+(,int256 price,,,) = priceFeed.latestRoundData();
+return ((uint256 (price) * ADDITIONAL_FEED_PRECISION) * Amount)/PRECISION;
+
+}
+
+function getUserLockTokenBalance(address token) public view returns(uint256) {
+  if(addresstoTokenLocked[msg.sender][token] == 0){
+    return 0;
+  }else {
+  return(addresstoTokenLocked[msg.sender][token]);
+}
+}
+
+
+function getUserTokenBalance(address token) public /*isAllowedToken(token)*/ view returns(uint256) {
+    uint256 tokenBalance = addressToTokenBalance[msg.sender][token];
+    return tokenBalance;
 }
 }

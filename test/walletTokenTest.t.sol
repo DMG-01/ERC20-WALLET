@@ -23,8 +23,11 @@ contract walletTest is Test{
     uint256 constant EXCESS_AMOUNT = 15 ether;
     uint256 constant ALLOWED_AMOUNT = 20 ether;
     uint256 constant LOCK_TIME = 10 days;
+    uint256 constant AMOUNT_TO_SEND = 5 ether;
 
     address public USER = makeAddr("user");
+    address public USER1 = makeAddr("user1");
+    address public USER2 = makeAddr("user2");
 
 function setUp() public {
             deployer = new deployWallet();
@@ -34,6 +37,8 @@ function setUp() public {
             ERC20Mock(wbtcAddress).mint((address(USER)),STARTING_ERC20_BALANCE);
             ERC20Mock(wethAddress).approve((address(wallet)),STARTING_ERC20_BALANCE);
             ERC20Mock(wbtcAddress).approve((address(wallet)),STARTING_ERC20_BALANCE); 
+            ERC20Mock(wethAddress).approve((address(USER1)),STARTING_ERC20_BALANCE);
+            ERC20Mock(wbtcAddress).approve((address(USER1)),STARTING_ERC20_BALANCE);
 }
     address[] tokenPriceFeedAddresses;
     address[] tokenAddresses;
@@ -141,4 +146,39 @@ function setUp() public {
        assertEq(actualWethBalance,actualWbtcBalance);
      
    }
+
+   function testWithdrawTokenRevertsWhenItsNotTime() fundAccountWithWeth public {
+    vm.startPrank(USER);
+    wallet.lockTokens(wethAddress,STARTING_ERC20_BALANCE,LOCK_TIME);
+    vm.expectRevert(Wallet.youCantWithdrawTokenYet.selector);
+    wallet.withdrawLockedTokens(wethAddress);
+   }
+/*
+   function testWithdrawalFunctionWorks() fundAccountWithWbtc public {
+    vm.startPrank(USER);
+  uint256  currentTimeStamp = block.timestamp;
+  wallet.lockTokens(wethAddress,STARTING_ERC20_BALANCE,LOCK_TIME);
+    block.timestamp = block.timestamp + LOCK_TIME;
+  wallet.withdrawLockedTokens(wbtcAddress);
+  uint256 actualLockedTokenBalance = wallet.getUserTokenBalance(wbtcAddress);
+  assertEq(actualLockedTokenBalance, 0);
+   }
+   */
+  function testSendTokenWorks() public fundAccountWithWbtc {
+    vm.startPrank(USER);
+    wallet.sendToken(wbtcAddress,AMOUNT_TO_SEND,USER1);
+    uint256 actualUSERBalance = wallet.getUserTokenBalance(wbtcAddress); 
+    vm.stopPrank();
+    vm.prank(USER1);
+    uint256 actualUSER1Balance = wallet.getUserTokenBalance(wbtcAddress);
+    assertEq(actualUSERBalance,actualUSER1Balance);
+  }
+
+function testSpendingLimitWorks() public {
+
+}
+
+function testCannotSendLockedToken() public {
+
+}
 }

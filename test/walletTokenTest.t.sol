@@ -7,6 +7,8 @@ import {Wallet} from "src/walletToken.sol";
 import {HelperConfig} from "script/helperConfig.sol";
 import {deployWallet} from "script/walletTokenDeployScript.s.sol";
 import { ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/ERC20Mock.sol";
+import {console} from "forge-std/Test.sol";
+
 
 contract walletTest is Test{
     deployWallet deployer;
@@ -23,6 +25,7 @@ contract walletTest is Test{
     uint256 constant EXCESS_AMOUNT = 15 ether;
     uint256 constant ALLOWED_AMOUNT = 20 ether;
     uint256 constant LOCK_TIME = 10 days;
+    uint256 constant SPENDING_LIMIT = 4 ether;
     uint256 constant AMOUNT_TO_SEND = 5 ether;
 
     address public USER = makeAddr("user");
@@ -172,13 +175,23 @@ function setUp() public {
     vm.prank(USER1);
     uint256 actualUSER1Balance = wallet.getUserTokenBalance(wbtcAddress);
     assertEq(actualUSERBalance,actualUSER1Balance);
+    console.log(actualUSERBalance);
   }
 
-function testSpendingLimitWorks() public {
-
+function testSpendingLimitWorks() public fundAccountWithWbtc {
+    vm.startPrank(USER);
+    wallet._addToDailySpendingLimit(wbtcAddress,SPENDING_LIMIT);
+    vm.expectRevert(Wallet.amountHasExceededLimit.selector);
+    wallet.sendToken(wbtcAddress,AMOUNT_TO_SEND,USER1);
+    //uint256 actualUserBalance = wallet.getUserTokenBalance(wbtcAddress);
+   // assertEq(actualUserBalance,10 ether);
 }
 
-function testCannotSendLockedToken() public {
+function testCannotSendLockedToken() public fundAccountWithWbtc {
+     vm.startPrank(USER);
+     wallet.lockTokens(wbtcAddress,STARTING_ERC20_BALANCE,LOCK_TIME);
+     vm.expectRevert(Wallet.InsufficientBalance.selector);
+     wallet.sendToken(wbtcAddress,STARTING_ERC20_BALANCE,USER1);
 
 }
 }

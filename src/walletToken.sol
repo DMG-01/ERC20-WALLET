@@ -223,15 +223,18 @@ function _secondUserConfirmTransaction(uint256 index, address userTwo) internal 
  
 }
 
-function sendToken(address tokenAddress, uint256 amount, address recepient) public  moreThanZero(amount) returns(bool) {
+function sendToken(address tokenAddress, uint256 amount, address recepient) public  moreThanZero(amount)  {
 SpendingLimit(tokenAddress,amount);
 //IERC20(tokenAddress).approve(address(this),amount);
-bool _sendTokenSuccessful = IERC20(tokenAddress).transferFrom(msg.sender,recepient,amount);
+//bool _sendTokenSuccessful = IERC20(tokenAddress).transferFrom(msg.sender,recepient,amount);
+addressToTokenBalance[msg.sender][tokenAddress] -= amount;
+addressToTokenBalance[recepient][tokenAddress] += amount;
+/*
 if(!_sendTokenSuccessful) {
   revert sendTokenFailed();
 }else {
  return true;
-}
+}*/
 }
 
 function createBudget() public {}
@@ -241,16 +244,18 @@ tokenPriceFeedAddresses.push(_tokenPriceFeedAddress);
 tokenAddresses.push(_tokenAddress);
 }
 */
-function SpendingLimit(address tokenAddress,uint256 amount) public {
-(uint256 tokenLimit) = _addToDailySpendingLimit(tokenAddress,amount);
-if (amount > tokenLimit) {
+function SpendingLimit(address tokenAddress,uint256 amount) view internal {
+uint256 spendingLimit = addressToTokenLimit[msg.sender][tokenAddress]; 
+if(spendingLimit > 0){
+     if(amount > spendingLimit) {
   revert amountHasExceededLimit();
 }
+} 
 }
 
-function _addToDailySpendingLimit(address tokenAddress, uint256 amount) internal  returns(uint256){
-uint256 tokenLimit = addressToTokenLimit[msg.sender][tokenAddress] = amount;
-return tokenLimit;
+function _addToDailySpendingLimit(address tokenAddress, uint256 amount) public {
+ addressToTokenLimit[msg.sender][tokenAddress] = amount;
+//return (addressToTokenLimit[msg.sender][tokenAddress]);
 }
 
 

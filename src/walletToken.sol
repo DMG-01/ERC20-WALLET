@@ -203,7 +203,7 @@ emit tokenSwapSuccessful(msg.sender,userTwo,callerAmount,userTwoAmount,callerTok
 else if (_secondUserConfirmTransaction(0,userTwo)) {
   revert secondaryUserRejectedTheTransaction();
 }
-else if( block.timestamp > timeOfFunctionCall + 15 minutes) {
+else if( block.timestamp > timeOfFunctionCall + 30 minutes) {
 revert functionTimeOut();
 
 }

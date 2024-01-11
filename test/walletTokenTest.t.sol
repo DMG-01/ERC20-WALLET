@@ -30,6 +30,8 @@ contract walletTest is Test{
     uint256 constant AMOUNT_TO_SEND = 5 ether;
     uint256 constant SEND_ETHER = 5 ether;
     uint256 constant USER1_STARTING_ETHER = 3 ether;
+    uint256 constant USER_TOKEN_TO_SWAP = 3 ether;
+    uint256 constant USER2_TOKEN_TO_SWAP = 5 ether;
 
     address public USER = makeAddr("user");
     address public USER1 = makeAddr("user1");
@@ -41,12 +43,16 @@ function setUp() public {
             (wethAddress,wbtcAddress,wethUsdPriceFeedAddress,wbtcUsdPriceFeedAddress,) = helperConfig.activeNetworkConfig();
             ERC20Mock(wethAddress).mint((address(USER)),STARTING_ERC20_BALANCE);
             ERC20Mock(wbtcAddress).mint((address(USER)),STARTING_ERC20_BALANCE);
+            ERC20Mock(wbtcAddress).mint((address(USER2)),STARTING_ERC20_BALANCE);
+
             ERC20Mock(wethAddress).approve((address(wallet)),STARTING_ERC20_BALANCE);
             ERC20Mock(wbtcAddress).approve((address(wallet)),STARTING_ERC20_BALANCE); 
             ERC20Mock(wethAddress).approve((address(USER1)),STARTING_ERC20_BALANCE);
             ERC20Mock(wbtcAddress).approve((address(USER1)),STARTING_ERC20_BALANCE);
+            ERC20Mock(wbtcAddress).approve((address(USER2)),STARTING_ERC20_BALANCE);
             vm.deal(USER,STARTING_ETHER_BALANCE);
             vm.deal(USER1,USER1_STARTING_ETHER);
+
 }
     address[] tokenPriceFeedAddresses;
     address[] tokenAddresses;
@@ -70,6 +76,13 @@ function setUp() public {
     vm.startPrank(USER);
     ERC20Mock(wbtcAddress).approve(address(wallet), ALLOWED_AMOUNT);
     wallet.fundAccount(wbtcAddress,STARTING_ERC20_BALANCE);
+    _;
+    }
+
+         modifier fundUSER2WithWbtc() {
+    vm.startPrank(USER2);
+    ERC20Mock(wbtcAddress).approve(address(wallet), ALLOWED_AMOUNT);
+    wallet.fundAccount(wbtcAddress,USER2_TOKEN_TO_SWAP);
     _;
     }
 
@@ -228,5 +241,13 @@ function testTokenLimitCanChange() public fundAccountWithWbtc {
    wallet._addToDailySpendingLimit(wbtcAddress,NEW_SPENDING_LIMIT);
    uint256 actualSpendingLimit = wallet.returnUserSpendingLimit(wbtcAddress);
    assertEq(actualSpendingLimit,NEW_SPENDING_LIMIT);
+}
+function testSwapTokenFunctionWorks() public fundAccountWithWeth fundUSER2WithWbtc {
+   vm.prank(USER);
+   wallet.swapTokens(USER_TOKEN_TO_SWAP,USER2_TOKEN_TO_SWAP,wethAddress,wbtcAddress,USER1);
+   vm.startPrank(USER2);
+   wallet._secondUserConfirmTransaction(1,USER);
+   uint256 user2ActualWethBalance = wallet.getUserTokenBalance(wethAddress);
+   assertEq(user2ActualWethBalance,3);
 }
 }

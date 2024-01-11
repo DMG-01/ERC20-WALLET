@@ -22,15 +22,18 @@ contract walletTest is Test{
 
     address WRONG_TOKEN;
     uint256 constant STARTING_ERC20_BALANCE = 10 ether;
+    uint256 constant STARTING_ETHER_BALANCE = 10 ether;
     uint256 constant EXCESS_AMOUNT = 15 ether;
     uint256 constant ALLOWED_AMOUNT = 20 ether;
     uint256 constant LOCK_TIME = 10 days;
     uint256 constant SPENDING_LIMIT = 4 ether;
     uint256 constant AMOUNT_TO_SEND = 5 ether;
+    uint256 constant SEND_ETHER = 5 ether;
+    uint256 constant USER1_STARTING_ETHER = 3 ether;
 
     address public USER = makeAddr("user");
     address public USER1 = makeAddr("user1");
-    address public USER2 = makeAddr("user2");
+    address public  USER2 = makeAddr("user2");
 
 function setUp() public {
             deployer = new deployWallet();
@@ -42,6 +45,8 @@ function setUp() public {
             ERC20Mock(wbtcAddress).approve((address(wallet)),STARTING_ERC20_BALANCE); 
             ERC20Mock(wethAddress).approve((address(USER1)),STARTING_ERC20_BALANCE);
             ERC20Mock(wbtcAddress).approve((address(USER1)),STARTING_ERC20_BALANCE);
+            vm.deal(USER,STARTING_ETHER_BALANCE);
+            vm.deal(USER1,USER1_STARTING_ETHER);
 }
     address[] tokenPriceFeedAddresses;
     address[] tokenAddresses;
@@ -183,8 +188,7 @@ function testSpendingLimitWorks() public fundAccountWithWbtc {
     wallet._addToDailySpendingLimit(wbtcAddress,SPENDING_LIMIT);
     vm.expectRevert(Wallet.amountHasExceededLimit.selector);
     wallet.sendToken(wbtcAddress,AMOUNT_TO_SEND,USER1);
-    //uint256 actualUserBalance = wallet.getUserTokenBalance(wbtcAddress);
-   // assertEq(actualUserBalance,10 ether);
+    
 }
 
 function testCannotSendLockedToken() public fundAccountWithWbtc {
@@ -192,6 +196,37 @@ function testCannotSendLockedToken() public fundAccountWithWbtc {
      wallet.lockTokens(wbtcAddress,STARTING_ERC20_BALANCE,LOCK_TIME);
      vm.expectRevert(Wallet.InsufficientBalance.selector);
      wallet.sendToken(wbtcAddress,STARTING_ERC20_BALANCE,USER1);
+}
+function testSendEtherWorks() public {
+    vm.startPrank(USER);
+    wallet.sendEther{value:SEND_ETHER}(payable(USER1));
+    uint256 actualSenderBalance = wallet.getUserEtherBalance();
+    vm.stopPrank();
+    uint256 expectedSenderBalance = 5 ether;
+    assertEq(actualSenderBalance,expectedSenderBalance);
+}
+function testSendEtherRevertsWhenRecepientIsFunctionCaller() public {
+    vm.startPrank(USER);
+    vm.expectRevert(Wallet.cannotSendEtherToSelf.selector);
+    wallet.sendEther{value:SEND_ETHER}(payable(USER));
+}
+function testSendEtherWillRevertWithInsufficientBalance() public {
+    vm.startPrank(USER1);
+    vm.expectRevert(/*Wallet.InsufficientBalance.selector*/);
+    wallet.sendEther{value:SEND_ETHER}(payable(USER));
+}
+function testSendEtherRevertsWhenValueIsZero() public {
+    vm.startPrank(USER);
+    vm.expectRevert(Wallet.needsMoreThanZero.selector);
+    wallet.sendEther{value:0}(payable(USER1));
+}
 
+function testTokenLimitCanChange() public fundAccountWithWbtc {
+   vm.startPrank(USER);
+   wallet._addToDailySpendingLimit(wbtcAddress,SPENDING_LIMIT);
+   uint256 NEW_SPENDING_LIMIT = 2 ether;
+   wallet._addToDailySpendingLimit(wbtcAddress,NEW_SPENDING_LIMIT);
+   uint256 actualSpendingLimit = wallet.returnUserSpendingLimit(wbtcAddress);
+   assertEq(actualSpendingLimit,NEW_SPENDING_LIMIT);
 }
 }

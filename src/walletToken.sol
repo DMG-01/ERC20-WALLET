@@ -5,8 +5,9 @@ pragma solidity ^0.8.0;
 //standard ERC20 token is being installed from openZeppelin
 import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {AggregatorV3Interface} from "lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
-contract Wallet {
+contract Wallet is ReentrancyGuard{
 // an array to store the token addresses and the token pricefeed addresses
 
 
@@ -59,6 +60,7 @@ error functionTimeOut();
 error amountHasExceededLimit();
 error priceFeedAddressesDoesntEqualTokenAddresses();
 error invalidToken();
+error cannotSendEtherToSelf();
 
 /********EVENTS */
 event accountFunded(address indexed user,address indexed tokenFunded,uint256 indexed amountFunded) ;
@@ -110,9 +112,9 @@ constructor(
     }
 
 
-function signer() public {}
+//function signer() public {}
 
-function generateAddressAndPrivateKey() public {}
+//function generateAddressAndPrivateKey() public {}
 /*
 function depositCollateral(address token,uint256 amount) public moreThanZero(amount)   /*nonReentrant() returns(bool){
     addressToTokenBalance[msg.sender][token] += amount;
@@ -127,7 +129,7 @@ function depositCollateral(address token,uint256 amount) public moreThanZero(amo
     }
     }
 */
-function fundAccount(address token, uint256 amount) public moreThanZero(amount)  returns(bool) {
+function fundAccount(address token, uint256 amount) public moreThanZero(amount)  nonReentrant() returns(bool) {
       require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
      // IERC20(token).approve(address(this), amount);
       addressToTokenBalance[msg.sender][token] += amount;
@@ -141,7 +143,7 @@ function fundAccount(address token, uint256 amount) public moreThanZero(amount) 
  } 
 }
 
-function withdraw(address token, uint256 amount) public moreThanZero(amount) /*isAllowedToken(token)*/ returns(bool){
+function withdraw(address token, uint256 amount) public moreThanZero(amount) /*isAllowedToken(token)*/ nonReentrant() returns(bool){
       addressToTokenBalance[msg.sender][token] -= amount;
       bool success = IERC20(token).transfer(msg.sender, amount);
       emit tokenWithdrawn(msg.sender, token, amount);
@@ -152,9 +154,9 @@ function withdraw(address token, uint256 amount) public moreThanZero(amount) /*i
 }
 }
 
-function sendTokenToSameWalletUsers() public{}
 
-function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock) moreThanZero(amountToLock) /*isAllowedToken(tokenToLock)*/ public {
+
+function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock) moreThanZero(amountToLock) nonReentrant()/*isAllowedToken(tokenToLock)*/ public {
     if(amountToLock > addressToTokenBalance[msg.sender][tokenToLock]){
         revert InsufficientBalance();
     }else {
@@ -168,7 +170,7 @@ function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock)
 //remove from locked mapping
 //add to contract wallet
 // add REENTRANCY
-function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(tokenToWithdraw) */ {
+function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(tokenToWithdraw) */nonReentrant() {
   uint256 lockedBalance = addresstoTokenLocked[msg.sender][tokenToWithdraw];
   if (block.timestamp > (addresstoTokenLockedTime[msg.sender][tokenToWithdraw])){
     addresstoTokenLocked[msg.sender][tokenToWithdraw] = 0;
@@ -185,7 +187,7 @@ function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(
 
 // one person swapping will input the amounts and the other person would accept the transaction
 //check if the person calling the confirm transaction is the second user inputed in the contract
-function swapTokens(uint256 callerAmount, uint256 userTwoAmount, address callerTokenAddress,address userTwoTokenAddress, address userTwo) public {
+function swapTokens(uint256 callerAmount, uint256 userTwoAmount, address callerTokenAddress,address userTwoTokenAddress, address userTwo) public nonReentrant() {
 emit swapTokenFunctionHasBeenInitiated(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
 uint256 timeOfFunctionCall = block.timestamp;
 if( _secondUserConfirmTransaction(1,userTwo)) {
@@ -210,7 +212,7 @@ else {
 }
 }
 
-function _secondUserConfirmTransaction(uint256 index, address userTwo) internal  returns(bool) {
+function _secondUserConfirmTransaction(uint256 index, address userTwo) public   returns(bool) {
   require(userTwo == msg.sender,"only the second user can call this function");
    if(index == 1) {
     secondaryUserToTransactionStatus[msg.sender] = TransactionStatus.accepted;
@@ -223,21 +225,18 @@ function _secondUserConfirmTransaction(uint256 index, address userTwo) internal 
  
 }
 
-function sendToken(address tokenAddress, uint256 amount, address recepient) public  moreThanZero(amount)  {
+function sendToken(address tokenAddress, uint256 amount, address recepient) public  moreThanZero(amount) nonReentrant() {
+if(addressToTokenBalance[msg.sender][tokenAddress] == 0)
+{
+  revert InsufficientBalance();
+}else {
 SpendingLimit(tokenAddress,amount);
-//IERC20(tokenAddress).approve(address(this),amount);
-//bool _sendTokenSuccessful = IERC20(tokenAddress).transferFrom(msg.sender,recepient,amount);
 addressToTokenBalance[msg.sender][tokenAddress] -= amount;
 addressToTokenBalance[recepient][tokenAddress] += amount;
-/*
-if(!_sendTokenSuccessful) {
-  revert sendTokenFailed();
-}else {
- return true;
-}*/
+}
 }
 
-function createBudget() public {}
+//function createBudget() public {}
 /*
 function addTokenAndTokenPriceFeedAddress(address _tokenAddress, address _tokenPriceFeedAddress) public  {
 tokenPriceFeedAddresses.push(_tokenPriceFeedAddress);
@@ -258,14 +257,25 @@ function _addToDailySpendingLimit(address tokenAddress, uint256 amount) public {
 //return (addressToTokenLimit[msg.sender][tokenAddress]);
 }
 
+function sendEther(address payable recepient) payable public nonReentrant() {
+  if(msg.value <= 0) {
+    revert needsMoreThanZero();
+  }
+  else if(recepient == msg.sender){
+    revert cannotSendEtherToSelf();
+  }
+  else if(msg.value > (msg.sender.balance)){
+    revert InsufficientBalance();
+  }
+  else{
+    recepient.transfer(msg.value);
+emit etherHasBeenTransfered(recepient,msg.value,block.timestamp);
+}
+}
 
 /*****************GETTER
  *               FUNCTIONS
  *******************************/
-function sendEther(address payable recepient) payable public {
-  recepient.transfer(msg.value);
-emit etherHasBeenTransfered(recepient,msg.value,block.timestamp);
-}
 
 
 function getUserEtherBalance() public view returns(uint256) {
@@ -297,5 +307,8 @@ function getUserLockTokenBalance(address token) public view returns(uint256) {
 function getUserTokenBalance(address token) public /*isAllowedToken(token)*/ view returns(uint256) {
     uint256 tokenBalance = addressToTokenBalance[msg.sender][token];
     return tokenBalance;
+}
+function returnUserSpendingLimit(address token) public view returns (uint256) {
+  return (addressToTokenLimit[msg.sender][token]);
 }
 }

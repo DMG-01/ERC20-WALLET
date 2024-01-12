@@ -246,8 +246,10 @@ function testSwapTokenFunctionWorks() public fundAccountWithWeth fundUSER2WithWb
    vm.prank(USER);
    wallet.swapTokens(USER_TOKEN_TO_SWAP,USER2_TOKEN_TO_SWAP,wethAddress,wbtcAddress,USER1);
    vm.startPrank(USER2);
-   wallet._secondUserConfirmTransaction(1,USER);
+   wallet._secondUserConfirmTransaction(1,USER2);
    uint256 user2ActualWethBalance = wallet.getUserTokenBalance(wethAddress);
    assertEq(user2ActualWethBalance,3);
+   console.log(user2ActualWethBalance);
+   console.log(USER2_TOKEN_TO_SWAP);
 }
 }

@@ -61,6 +61,7 @@ error amountHasExceededLimit();
 error priceFeedAddressesDoesntEqualTokenAddresses();
 error invalidToken();
 error cannotSendEtherToSelf();
+error InsufficientBalanceFromSecondUserEnd();
 
 /********EVENTS */
 event accountFunded(address indexed user,address indexed tokenFunded,uint256 indexed amountFunded) ;
@@ -187,33 +188,44 @@ function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(
 
 // one person swapping will input the amounts and the other person would accept the transaction
 //check if the person calling the confirm transaction is the second user inputed in the contract
+
+//add spending limit to the swap function
 function swapTokens(uint256 callerAmount, uint256 userTwoAmount, address callerTokenAddress,address userTwoTokenAddress, address userTwo) public nonReentrant() {
 emit swapTokenFunctionHasBeenInitiated(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
 uint256 timeOfFunctionCall = block.timestamp;
 if( _secondUserConfirmTransaction(1,userTwo)) {
+
+ if (callerAmount > addressToTokenBalance[msg.sender][callerTokenAddress]) {
+   revert InsufficientBalance();
+}
+else if (userTwoAmount > addressToTokenBalance[userTwo][userTwoTokenAddress]) {
+   revert InsufficientBalanceFromSecondUserEnd();
+}
+else {
 addressToTokenBalance[msg.sender][callerTokenAddress] -= callerAmount;
 addressToTokenBalance[userTwo][userTwoTokenAddress] -= userTwoAmount;
 addressToTokenBalance[msg.sender][userTwoTokenAddress] += userTwoAmount;
 addressToTokenBalance[userTwo][callerTokenAddress] += callerAmount;
+
 addressToTokenIn[msg.sender][userTwoTokenAddress] += userTwoAmount;
 addressToTokenOut[msg.sender][callerTokenAddress] += callerAmount;
 emit tokenSwapSuccessful(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
-
+}
 }
 else if (_secondUserConfirmTransaction(0,userTwo)) {
   revert secondaryUserRejectedTheTransaction();
 }
 else if( block.timestamp > timeOfFunctionCall + 30 minutes) {
 revert functionTimeOut();
-
 }
+
 else {
   revert secondaryUserRejectedTheTransaction();
 }
 }
 
 function _secondUserConfirmTransaction(uint256 index, address userTwo) public   returns(bool) {
-  require(userTwo == msg.sender,"only the second user can call this function");
+  //require(userTwo == msg.sender,"only the second user can call this function");
    if(index == 1) {
     secondaryUserToTransactionStatus[msg.sender] = TransactionStatus.accepted;
     return true;

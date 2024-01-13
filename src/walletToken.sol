@@ -45,6 +45,8 @@ mapping(address =>mapping(address => uint256)) addressToTokenTimeInterval;
 mapping (address => address) tokenAddressToPriceFeedAddress;
 mapping(address => mapping(address => uint256)) addressToTokenIn;
 mapping(address => mapping(address => uint256)) addressToTokenOut;
+
+/*MAPPINGS INVOLVED IN SWAP TRANSACTION */
 /* List of all custom error */
 error onlyOwnerCanCallThisFunction();
 error tokenNotAllowed();
@@ -190,10 +192,25 @@ function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(
 //check if the person calling the confirm transaction is the second user inputed in the contract
 
 //add spending limit to the swap function
+
+//emit
+//return
+//compare return
+
+
+// mapping address one to address two
+// returns msg.sender and details
+//function 2 checks if they are the result to the first key
+//if yes put in their own value just so it matches
+//perform swap
+
+//several mappings
+/*
 function swapTokens(uint256 callerAmount, uint256 userTwoAmount, address callerTokenAddress,address userTwoTokenAddress, address userTwo) public nonReentrant() {
 emit swapTokenFunctionHasBeenInitiated(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
 uint256 timeOfFunctionCall = block.timestamp;
-if( _secondUserConfirmTransaction(1,userTwo)) {
+if(  _secondUserConfirmTransaction(1,userTwo)) {
+  
 
  if (callerAmount > addressToTokenBalance[msg.sender][callerTokenAddress]) {
    revert InsufficientBalance();
@@ -225,7 +242,7 @@ else {
 }
 
 function _secondUserConfirmTransaction(uint256 index, address userTwo) public   returns(bool) {
-  //require(userTwo == msg.sender,"only the second user can call this function");
+  require(userTwo == msg.sender,"only the second user can call this function");
    if(index == 1) {
     secondaryUserToTransactionStatus[msg.sender] = TransactionStatus.accepted;
     return true;
@@ -234,9 +251,10 @@ function _secondUserConfirmTransaction(uint256 index, address userTwo) public   
     secondaryUserToTransactionStatus[msg.sender] = TransactionStatus.rejected;
     return false;
    }
+   
  
 }
-
+*/
 function sendToken(address tokenAddress, uint256 amount, address recepient) public  moreThanZero(amount) nonReentrant() {
 if(addressToTokenBalance[msg.sender][tokenAddress] == 0)
 {

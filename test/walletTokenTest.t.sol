@@ -31,7 +31,7 @@ contract walletTest is Test{
     uint256 constant SEND_ETHER = 5 ether;
     uint256 constant USER1_STARTING_ETHER = 3 ether;
     uint256 constant USER_TOKEN_TO_SWAP = 3 ether;
-    uint256 constant USER2_TOKEN_TO_SWAP = 5 ether;
+    uint256 constant USER2_TOKEN_TO_SWAP = 4 ether;
 
     address public USER = makeAddr("user");
     address public USER1 = makeAddr("user1");
@@ -251,5 +251,21 @@ function testSwapTokenFunctionWorks() public fundAccountWithWeth fundUSER2WithWb
    assertEq(user2ActualWethBalance,3);
    console.log(user2ActualWethBalance);
    console.log(USER2_TOKEN_TO_SWAP);
+}
+//interchange the caller
+
+function testSecondUserRejectTransaction() public fundAccountWithWeth /*fundAccountWithWbtc*/ fundUSER2WithWbtc {
+    vm.prank(USER);
+    //vm.expectRevert();
+    wallet.swapTokens(USER_TOKEN_TO_SWAP,USER2_TOKEN_TO_SWAP,wethAddress,wbtcAddress,USER2);
+    vm.startPrank(USER2);
+    wallet._secondUserConfirmTransaction(1,USER2);
+    uint256 userTwoActualWethBalance = wallet.getUserTokenBalance(wethAddress);
+    vm.stopPrank();
+    vm.prank(USER);
+    uint256 userActualWbtcBalance = wallet.getUserTokenBalance(wbtcAddress);
+    assertEq(userTwoActualWethBalance,USER_TOKEN_TO_SWAP); 
+    assertEq(userActualWbtcBalance,USER2_TOKEN_TO_SWAP);
+    
 }
 }

@@ -212,9 +212,9 @@ function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(
 
 //several mappings
 
-function swapTokenInitiator(address userTwo, uint256 callerAmount,uint256 userTwoAmount,address callerTokenAddress, address userTwoTokenAddress) public {
+function swapTokenInitiator( uint256 callerAmount,uint256 userTwoAmount,address callerTokenAddress, address userTwoTokenAddress,address userTwo) public {
   uint256 balance = addressToTokenBalance[msg.sender][callerTokenAddress];
-  if(callerAmount > balance/*addressToTokenBalance[msg.sender][callerTokenAddress]*/){
+  if(callerAmount > balance){
     revert InsufficientBalance();
   }
   else if (callerAmount < balance) {
@@ -228,14 +228,14 @@ function swapTokenInitiator(address userTwo, uint256 callerAmount,uint256 userTw
 
 }
 
-function secondUserConfirmation(address tokenToSwap, uint256 amountToSwap, address userOneAddress, address tokenAddressToReceive, uint256 amountToReceive) public {
+function secondUserConfirmation(uint256 amountToReceive,uint256 amountToSwap, address tokenAddressToReceive,address tokenToSwap,  address userOneAddress) public {
 
-(address userTwo, uint256 initiatorAmount, uint256 userTwoAmount, address callerTokenAddress, address userTwoTokenAddress) = returnSwapinitiatorDetails(userOneAddress);
+(address initiator, address userTwo, uint256 initiatorAmount, uint256 userTwoAmount, address callerTokenAddress, address userTwoTokenAddress) = returnSwapinitiatorDetails(userOneAddress);
 if(amountToSwap > getUserTokenBalance(tokenToSwap)) {
   revert InsufficientBalance();
 }
 
-if( (msg.sender == userTwo) && (tokenToSwap == userTwoTokenAddress) && (amountToSwap == userTwoAmount) && (tokenAddressToReceive == callerTokenAddress) && (initiatorAmount == amountToReceive ))  {
+if ((amountToReceive == initiatorAmount) &&(amountToSwap == userTwoAmount) && (tokenAddressToReceive == callerTokenAddress) && (tokenToSwap == userTwoTokenAddress) && (userOneAddress == initiator) && (msg.sender == userTwo))  {
    
    addressToTokenBalance[msg.sender][tokenToSwap] -= amountToReceive;
 addressToTokenBalance[userOneAddress][tokenAddressToReceive] -= amountToReceive;
@@ -387,16 +387,15 @@ function returnUserSpendingLimit(address token) public view returns (uint256) {
 }
 
 //could add a modifier so that only msg.sender and userTwo can call it
-function returnSwapinitiatorDetails(address initiator) view public returns(address,uint256,uint256,address,address){
+function returnSwapinitiatorDetails(address initiator) view public returns(address, address,uint256,uint256,address,address){
    address userTwo = initiatorAddressToSecondUserAddress[initiator];
    uint256 initiatorAmount = initiatorAddressToAmountToGive[initiator];
    uint256 userTwoAmount = initiatorAddressToSecondUserAmountToReceive[initiator];
    address callerTokenAddress = initiatorAddressToTokenToGiveOutAddress[initiator];
    address userTwoTokenAddress = initiatorAddressToUserTwoTokenAddress[initiator];
 
-    return ( userTwo,initiatorAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
+    return ( msg.sender,userTwo,initiatorAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
 }
 
-function testSecondUserTokenWouldRevertWithInsufficientBalance() public {}
  
 }

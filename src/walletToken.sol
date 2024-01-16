@@ -47,6 +47,11 @@ mapping(address => mapping(address => uint256)) addressToTokenIn;
 mapping(address => mapping(address => uint256)) addressToTokenOut;
 
 /*MAPPINGS INVOLVED IN SWAP TRANSACTION */
+mapping(address => address) initiatorAddressToSecondUserAddress;
+mapping(address => uint256) initiatorAddressToAmountToGive;
+mapping(address => uint256) initiatorAddressToSecondUserAmountToReceive;
+mapping(address => address) initiatorAddressToTokenToGiveOutAddress;
+mapping(address => address) initiatorAddressToUserTwoTokenAddress;
 /* List of all custom error */
 error onlyOwnerCanCallThisFunction();
 error tokenNotAllowed();
@@ -64,6 +69,7 @@ error priceFeedAddressesDoesntEqualTokenAddresses();
 error invalidToken();
 error cannotSendEtherToSelf();
 error InsufficientBalanceFromSecondUserEnd();
+error parametersDontMatch();
 
 /********EVENTS */
 event accountFunded(address indexed user,address indexed tokenFunded,uint256 indexed amountFunded) ;
@@ -205,6 +211,41 @@ function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(
 //perform swap
 
 //several mappings
+
+function swapTokenInitiator(address userTwo, uint256 callerAmount,uint256 userTwoAmount,address callerTokenAddress, address userTwoTokenAddress) public {
+  uint256 balance = addressToTokenBalance[msg.sender][callerTokenAddress];
+  if(callerAmount > balance/*addressToTokenBalance[msg.sender][callerTokenAddress]*/){
+    revert InsufficientBalance();
+  }
+  else if (callerAmount < balance) {
+  initiatorAddressToSecondUserAddress[msg.sender] = userTwo;
+  initiatorAddressToAmountToGive[msg.sender] = callerAmount;
+  initiatorAddressToSecondUserAmountToReceive[msg.sender] = userTwoAmount;
+  initiatorAddressToTokenToGiveOutAddress[msg.sender] = callerTokenAddress;
+  initiatorAddressToUserTwoTokenAddress[msg.sender] = userTwoTokenAddress;
+  emit swapTokenFunctionHasBeenInitiated(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
+}
+
+}
+
+function secondUserConfirmation(address tokenToSwap, uint256 amountToSwap, address userOneAddress, address tokenAddressToReceive, uint256 amountToReceive) public {
+
+(address userTwo, uint256 initiatorAmount, uint256 userTwoAmount, address callerTokenAddress, address userTwoTokenAddress) = returnSwapinitiatorDetails(userOneAddress);
+if(amountToSwap > getUserTokenBalance(tokenToSwap)) {
+  revert InsufficientBalance();
+}
+
+if( (msg.sender == userTwo) && (tokenToSwap == userTwoTokenAddress) && (amountToSwap == userTwoAmount) && (tokenAddressToReceive == callerTokenAddress) && (initiatorAmount == amountToReceive ))  {
+   
+   addressToTokenBalance[msg.sender][tokenToSwap] -= amountToReceive;
+addressToTokenBalance[userOneAddress][tokenAddressToReceive] -= amountToReceive;
+addressToTokenBalance[msg.sender][tokenAddressToReceive] += amountToReceive;
+addressToTokenBalance[userOneAddress][tokenToSwap] += amountToSwap;
+} else {
+  revert parametersDontMatch();
+}
+
+}
 /*
 function swapTokens(uint256 callerAmount, uint256 userTwoAmount, address callerTokenAddress,address userTwoTokenAddress, address userTwo) public nonReentrant() {
 emit swapTokenFunctionHasBeenInitiated(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
@@ -259,7 +300,10 @@ function sendToken(address tokenAddress, uint256 amount, address recepient) publ
 if(addressToTokenBalance[msg.sender][tokenAddress] == 0)
 {
   revert InsufficientBalance();
-}else {
+} else if(amount > addressToTokenBalance[msg.sender][tokenAddress]) {
+  revert InsufficientBalance();
+}
+else {
 SpendingLimit(tokenAddress,amount);
 addressToTokenBalance[msg.sender][tokenAddress] -= amount;
 addressToTokenBalance[recepient][tokenAddress] += amount;
@@ -341,4 +385,18 @@ function getUserTokenBalance(address token) public /*isAllowedToken(token)*/ vie
 function returnUserSpendingLimit(address token) public view returns (uint256) {
   return (addressToTokenLimit[msg.sender][token]);
 }
+
+//could add a modifier so that only msg.sender and userTwo can call it
+function returnSwapinitiatorDetails(address initiator) view public returns(address,uint256,uint256,address,address){
+   address userTwo = initiatorAddressToSecondUserAddress[initiator];
+   uint256 initiatorAmount = initiatorAddressToAmountToGive[initiator];
+   uint256 userTwoAmount = initiatorAddressToSecondUserAmountToReceive[initiator];
+   address callerTokenAddress = initiatorAddressToTokenToGiveOutAddress[initiator];
+   address userTwoTokenAddress = initiatorAddressToUserTwoTokenAddress[initiator];
+
+    return ( userTwo,initiatorAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
+}
+
+function testSecondUserTokenWouldRevertWithInsufficientBalance() public {}
+ 
 }

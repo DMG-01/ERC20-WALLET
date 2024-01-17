@@ -394,7 +394,7 @@ function returnSwapinitiatorDetails(address initiator) view public returns(addre
    address callerTokenAddress = initiatorAddressToTokenToGiveOutAddress[initiator];
    address userTwoTokenAddress = initiatorAddressToUserTwoTokenAddress[initiator];
 
-    return ( msg.sender,userTwo,initiatorAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
+    return (initiator,userTwo,initiatorAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
 }
 
  

@@ -121,23 +121,7 @@ constructor(
     }
 
 
-//function signer() public {}
 
-//function generateAddressAndPrivateKey() public {}
-/*
-function depositCollateral(address token,uint256 amount) public moreThanZero(amount)   /*nonReentrant() returns(bool){
-    addressToTokenBalance[msg.sender][token] += amount;
-    emit collateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
-    bool success = IERC20(token).transferFrom(msg.sender,address(this),amount);
-
-    if(!success){
-        revert fundAccountFailed();
-    }
-    else {
-        return true;
-    }
-    }
-*/
 function fundAccount(address token, uint256 amount) public moreThanZero(amount)  nonReentrant() returns(bool) {
       require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
      // IERC20(token).approve(address(this), amount);
@@ -190,29 +174,8 @@ function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(
      revert youCantWithdrawTokenYet();
   }
 }
-/**may be removed */
 
-    
-
-// one person swapping will input the amounts and the other person would accept the transaction
-//check if the person calling the confirm transaction is the second user inputed in the contract
-
-//add spending limit to the swap function
-
-//emit
-//return
-//compare return
-
-
-// mapping address one to address two
-// returns msg.sender and details
-//function 2 checks if they are the result to the first key
-//if yes put in their own value just so it matches
-//perform swap
-
-//several mappings
-
-function swapTokenInitiator( uint256 callerAmount,uint256 userTwoAmount,address callerTokenAddress, address userTwoTokenAddress,address userTwo) public {
+function swapTokenInitiator( uint256 callerAmount,uint256 userTwoAmount,address callerTokenAddress, address userTwoTokenAddress,address userTwo) public nonReentrant {
   uint256 balance = addressToTokenBalance[msg.sender][callerTokenAddress];
   if(callerAmount > balance){
     revert InsufficientBalance();
@@ -228,7 +191,7 @@ function swapTokenInitiator( uint256 callerAmount,uint256 userTwoAmount,address 
 
 }
 
-function secondUserConfirmation(uint256 amountToReceive,uint256 amountToSwap, address tokenAddressToReceive,address tokenToSwap,  address userOneAddress) public {
+function secondUserConfirmation(uint256 amountToReceive,uint256 amountToSwap, address tokenAddressToReceive,address tokenToSwap,  address userOneAddress) public nonReentrant {
 
 (address initiator, address userTwo, uint256 initiatorAmount, uint256 userTwoAmount, address callerTokenAddress, address userTwoTokenAddress) = returnSwapinitiatorDetails(userOneAddress);
 if(amountToSwap > getUserTokenBalance(tokenToSwap)) {
@@ -246,56 +209,7 @@ addressToTokenBalance[userOneAddress][tokenToSwap] += amountToSwap;
 }
 
 }
-/*
-function swapTokens(uint256 callerAmount, uint256 userTwoAmount, address callerTokenAddress,address userTwoTokenAddress, address userTwo) public nonReentrant() {
-emit swapTokenFunctionHasBeenInitiated(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
-uint256 timeOfFunctionCall = block.timestamp;
-if(  _secondUserConfirmTransaction(1,userTwo)) {
-  
 
- if (callerAmount > addressToTokenBalance[msg.sender][callerTokenAddress]) {
-   revert InsufficientBalance();
-}
-else if (userTwoAmount > addressToTokenBalance[userTwo][userTwoTokenAddress]) {
-   revert InsufficientBalanceFromSecondUserEnd();
-}
-else {
-addressToTokenBalance[msg.sender][callerTokenAddress] -= callerAmount;
-addressToTokenBalance[userTwo][userTwoTokenAddress] -= userTwoAmount;
-addressToTokenBalance[msg.sender][userTwoTokenAddress] += userTwoAmount;
-addressToTokenBalance[userTwo][callerTokenAddress] += callerAmount;
-
-addressToTokenIn[msg.sender][userTwoTokenAddress] += userTwoAmount;
-addressToTokenOut[msg.sender][callerTokenAddress] += callerAmount;
-emit tokenSwapSuccessful(msg.sender,userTwo,callerAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
-}
-}
-else if (_secondUserConfirmTransaction(0,userTwo)) {
-  revert secondaryUserRejectedTheTransaction();
-}
-else if( block.timestamp > timeOfFunctionCall + 30 minutes) {
-revert functionTimeOut();
-}
-
-else {
-  revert secondaryUserRejectedTheTransaction();
-}
-}
-
-function _secondUserConfirmTransaction(uint256 index, address userTwo) public   returns(bool) {
-  require(userTwo == msg.sender,"only the second user can call this function");
-   if(index == 1) {
-    secondaryUserToTransactionStatus[msg.sender] = TransactionStatus.accepted;
-    return true;
-   }
-   else  {
-    secondaryUserToTransactionStatus[msg.sender] = TransactionStatus.rejected;
-    return false;
-   }
-   
- 
-}
-*/
 function sendToken(address tokenAddress, uint256 amount, address recepient) public  moreThanZero(amount) nonReentrant() {
 if(addressToTokenBalance[msg.sender][tokenAddress] == 0)
 {
@@ -310,13 +224,7 @@ addressToTokenBalance[recepient][tokenAddress] += amount;
 }
 }
 
-//function createBudget() public {}
-/*
-function addTokenAndTokenPriceFeedAddress(address _tokenAddress, address _tokenPriceFeedAddress) public  {
-tokenPriceFeedAddresses.push(_tokenPriceFeedAddress);
-tokenAddresses.push(_tokenAddress);
-}
-*/
+
 function SpendingLimit(address tokenAddress,uint256 amount) view internal {
 uint256 spendingLimit = addressToTokenLimit[msg.sender][tokenAddress]; 
 if(spendingLimit > 0){
@@ -328,7 +236,6 @@ if(spendingLimit > 0){
 
 function _addToDailySpendingLimit(address tokenAddress, uint256 amount) public {
  addressToTokenLimit[msg.sender][tokenAddress] = amount;
-//return (addressToTokenLimit[msg.sender][tokenAddress]);
 }
 
 function sendEther(address payable recepient) payable public nonReentrant() {
@@ -397,5 +304,6 @@ function returnSwapinitiatorDetails(address initiator) view public returns(addre
     return (initiator,userTwo,initiatorAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
 }
 
- 
+ //ALERT TOKEN PRICES
+ //SWAP WITH LIQUIDITY POOL
 }

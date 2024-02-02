@@ -8,23 +8,8 @@ import {AggregatorV3Interface} from "lib/chainlink-brownie-contracts/contracts/s
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 contract Wallet is ReentrancyGuard{
-// an array to store the token addresses and the token pricefeed addresses
 
 
-// this enum called TransactionStatus is used to store the status of a transaction when a user intends to swap p2p it includes pending,accepted and rejected
-enum TransactionStatus {
-  pending,
-  accepted,
-  rejected
-}
-
-TransactionStatus transactionStatus;
-
-struct transactionDetails {
-  address recepient ;
-  uint256 amount ;
-  uint256 time;
-}
 
 uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
 uint256 private constant PRECISION = 1e18;
@@ -36,8 +21,9 @@ uint256 private constant PRECISION = 1e18;
   *the fourth is user to their locked token
   * and the fourth is user to the time of their token unlock time 
  */
-mapping(address => TransactionStatus) secondaryUserToTransactionStatus;
+
 mapping(address =>mapping(address => uint256)) addressToTokenBalance;
+mapping(address => uint256) addressToEtherBalance;
 mapping(address =>mapping(address =>uint256)) addressToTokenLimit;
 mapping(address =>mapping(address => uint256)) addresstoTokenLocked;
 mapping(address =>mapping(address => uint256)) addresstoTokenLockedTime;
@@ -79,6 +65,10 @@ event swapTokenFunctionHasBeenInitiated(address indexed caller, address indexed 
 event tokenSwapSuccessful(address indexed caller, address indexed userTwo, uint256  callerAmount, uint256  userTwoAmount, address  callerTokenAddress, address  userTwoTokenAddress);
 event etherHasBeenTransfered(address indexed recepient, uint256 amount, uint256 time);
 address public owner ;
+/**
+ * modifiers that are used in the contract 
+ * e.g onlyOwner, moreThanZero, isAllowedToken
+ */
 
 modifier onlyOwner() {
     if(msg.sender != owner){
@@ -101,7 +91,12 @@ modifier isAllowedToken(address token) {
   _;
 }
 
-
+/**
+ * a constructor that takes in a two parameters of data type array
+ * the priceFeedAddresses is an array that consist of the token chainlink price feed address
+ * and the tokenAddress consist of the address of the token
+ * the constructor ensures the token price feed address array is the same as the token address and assign the price feed to its token address
+ */
 
 constructor(
     address[] memory  tokenPriceFeedAddresses,
@@ -120,9 +115,9 @@ constructor(
 
     }
 
+/* fund Account function that allows user to fund their contract wallet with any token from their external wallet such as metamask   */
 
-
-function fundAccount(address token, uint256 amount) public moreThanZero(amount)  nonReentrant() returns(bool) {
+function fundAccount(address token, uint256 amount) public  moreThanZero(amount)  nonReentrant() returns(bool) {
       require(IERC20(token).allowance(msg.sender, address(this)) >= amount, "Insufficient allowance");
      // IERC20(token).approve(address(this), amount);
       addressToTokenBalance[msg.sender][token] += amount;
@@ -136,6 +131,26 @@ function fundAccount(address token, uint256 amount) public moreThanZero(amount) 
  } 
 }
 
+// this function strictly funds the user account with ether
+function fundAccountWithEther() public payable {
+
+}
+// this function is supposed to withdraw ether back to the user wallet 
+function withdrawFundedEther(uint256 amount) public payable {
+ if (amount > msg.sender.balance){
+  revert InsufficientBalance();
+ }
+ /*
+ (bool success,) = owner.call{value: amount}("");
+ require(success);
+ */
+payable(msg.sender).transfer(amount);
+}
+
+
+/* this function withdraws the token  to the address of the user
+it takes in two parameter token which is the address of the token to withdraw and amount which is the amount of the token the user wants to withdraw
+ */
 function withdraw(address token, uint256 amount) public moreThanZero(amount) /*isAllowedToken(token)*/ nonReentrant() returns(bool){
       addressToTokenBalance[msg.sender][token] -= amount;
       bool success = IERC20(token).transfer(msg.sender, amount);
@@ -147,7 +162,9 @@ function withdraw(address token, uint256 amount) public moreThanZero(amount) /*i
 }
 }
 
-
+/** the lock token function allows user to lock their token over a period of time 
+ *  it takes in three parameters tokenToLock which is the address of the token the user wants to lock, amountToLock which is the amount of the token the user wants to lock and, the locktime which is the time before the token is allowed to be withdrawn 
+ */
 
 function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock) moreThanZero(amountToLock) nonReentrant()/*isAllowedToken(tokenToLock)*/ public {
     if(amountToLock > addressToTokenBalance[msg.sender][tokenToLock]){
@@ -160,9 +177,9 @@ function lockTokens(address tokenToLock, uint256 amountToLock, uint256 timeLock)
     }
 }
 
-//remove from locked mapping
-//add to contract wallet
-// add REENTRANCY
+/* withdrawLockedToken function withdraws the token that was locked in the above contract once the ripe time has been reached 
+* it takes in one parameter which is the token to withdraw 
+ */
 function withdrawLockedTokens(address tokenToWithdraw)  public /*isAllowedToken(tokenToWithdraw) */nonReentrant() {
   uint256 lockedBalance = addresstoTokenLocked[msg.sender][tokenToWithdraw];
   if (block.timestamp > (addresstoTokenLockedTime[msg.sender][tokenToWithdraw])){
@@ -261,6 +278,7 @@ emit etherHasBeenTransfered(recepient,msg.value,block.timestamp);
 
 function getUserEtherBalance() public view returns(uint256) {
   return msg.sender.balance;
+
 }
 
 function getToTalInAndOutOfToken(address token) public view returns(uint256, uint256) {
@@ -304,6 +322,9 @@ function returnSwapinitiatorDetails(address initiator) view public returns(addre
     return (initiator,userTwo,initiatorAmount,userTwoAmount,callerTokenAddress,userTwoTokenAddress);
 }
 
+function returnTrackedEtherBalance() public view returns(uint256) {
+  return addressToEtherBalance[msg.sender];
+}
  //ALERT TOKEN PRICES
  //SWAP WITH LIQUIDITY POOL
 }

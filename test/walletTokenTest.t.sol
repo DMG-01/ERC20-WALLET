@@ -315,5 +315,20 @@ function testSwapTokenInitiatorRevertsWhenCallerHasInsufficientFund() public fun
     uint256 user2WethBalance = wallet.getUserTokenBalance(wethAddress);
     assertEq(user2WethBalance,USER_TOKEN_TO_SWAP);
   }  
+  function testFundAccountWithEtherWorks() public {
+    vm.startPrank(USER);
+    wallet.fundAccountWithEther{value:STARTING_ETHER_BALANCE};
+    uint256 expectedBalance = wallet.getUserEtherBalance();
+    assertEq(expectedBalance, STARTING_ETHER_BALANCE);
+  }
   
+  /**this test doesnt work */
+  function testWithdrawEtherWorks() public {
+    vm.startPrank(USER);
+    wallet.fundAccountWithEther{value:STARTING_ETHER_BALANCE};
+    wallet.withdrawFundedEther(AMOUNT_TO_SEND);
+    uint256 balance = wallet.getUserEtherBalance();
+    assertEq(balance, AMOUNT_TO_SEND);
+    
+  }
 }

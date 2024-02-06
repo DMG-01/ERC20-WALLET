@@ -31,6 +31,7 @@ mapping(address =>mapping(address => uint256)) addressToTokenTimeInterval;
 mapping (address => address) tokenAddressToPriceFeedAddress;
 mapping(address => mapping(address => uint256)) addressToTokenIn;
 mapping(address => mapping(address => uint256)) addressToTokenOut;
+mapping(address => uint256) addressToEtherInWalletBalance;
 
 /*MAPPINGS INVOLVED IN SWAP TRANSACTION */
 mapping(address => address) initiatorAddressToSecondUserAddress;
@@ -133,18 +134,16 @@ function fundAccount(address token, uint256 amount) public  moreThanZero(amount)
 
 // this function strictly funds the user account with ether
 function fundAccountWithEther() public payable {
-
+addressToEtherInWalletBalance[msg.sender] += msg.value;
 }
 // this function is supposed to withdraw ether back to the user wallet 
 function withdrawFundedEther(uint256 amount) public payable {
- if (amount > msg.sender.balance){
+ if (amount > addressToEtherInWalletBalance[msg.sender]){
   revert InsufficientBalance();
  }
- /*
- (bool success,) = owner.call{value: amount}("");
- require(success);
- */
-payable(msg.sender).transfer(amount);
+ addressToEtherInWalletBalance[msg.sender] -= msg.value;
+(bool success,) = owner.call{value: msg.value}("");
+        require(success);
 }
 
 
@@ -279,6 +278,10 @@ emit etherHasBeenTransfered(recepient,msg.value,block.timestamp);
 function getUserEtherBalance() public view returns(uint256) {
   return msg.sender.balance;
 
+}
+
+function getUserWalletEtherBalance() public view returns(uint256) {
+return (addressToEtherInWalletBalance[msg.sender]);
 }
 
 function getToTalInAndOutOfToken(address token) public view returns(uint256, uint256) {

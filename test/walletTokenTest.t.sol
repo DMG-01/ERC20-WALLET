@@ -325,10 +325,9 @@ function testSwapTokenInitiatorRevertsWhenCallerHasInsufficientFund() public fun
   /**this test doesnt work */
   function testWithdrawEtherWorks() public {
     vm.startPrank(USER);
-    wallet.fundAccountWithEther{value:STARTING_ETHER_BALANCE};
-    wallet.withdrawFundedEther(AMOUNT_TO_SEND);
-    uint256 balance = wallet.getUserEtherBalance();
-    assertEq(balance, AMOUNT_TO_SEND);
-    
+    wallet.fundAccountWithEther{value:STARTING_ETHER_BALANCE}();
+    wallet.withdrawFundedEther(STARTING_ETHER_BALANCE);
+    uint256 balance = wallet.getUserWalletEtherBalance();
+    assertEq(balance, 0);
   }
 }

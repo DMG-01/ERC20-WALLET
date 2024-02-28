@@ -141,11 +141,10 @@ function withdrawFundedEther(uint256 amount) public payable {
  if (amount > addressToEtherInWalletBalance[msg.sender]){
   revert InsufficientBalance();
  }
- addressToEtherInWalletBalance[msg.sender] -= msg.value;
-(bool success,) = owner.call{value: msg.value}("");
+ addressToEtherInWalletBalance[msg.sender] -= amount;
+(bool success,) = owner.call{value: amount}("");
         require(success);
 }
-
 
 /* this function withdraws the token  to the address of the user
 it takes in two parameter token which is the address of the token to withdraw and amount which is the amount of the token the user wants to withdraw

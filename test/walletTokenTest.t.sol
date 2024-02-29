@@ -338,5 +338,6 @@ function testSwapTokenInitiatorRevertsWhenCallerHasInsufficientFund() public fun
      wallet.fundAccountWithEther{value:STARTING_ETHER_BALANCE}();
      vm.expectRevert(Wallet.InsufficientBalance.selector);
      wallet.withdrawFundedEther(EXCESS_AMOUNT);
+
   }
 }

@@ -12,7 +12,8 @@ pragma solidity ^0.8.0;
 * vote is done before any parameter can be changed
 */
 
-
+import {Wallet} from "src/walletToken.sol";
+import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 contract GroupSaving{
 
@@ -22,7 +23,13 @@ error prametersCanOnlyBeSetOnce();
 error alreadyAMember();
 error cantJoinSavingIsOngoing();
 error numberOfParticipantNotComplete();
+error InsufficientBalance();
+error savingFailed();
 
+      /*EVENTS */
+event contributionDeducted(address saver, uint256 amount);
+
+Wallet wallet;
 address immutable owner;
 uint256  numberOfParticipant;
 address  tokenAddress;
@@ -72,6 +79,9 @@ function join() public  {
     if( isSavingOngoing == true) {
         revert cantJoinSavingIsOngoing();
     }
+    else if(wallet.getUserTokenBalance(tokenAddress) < contributionAmountPerPeriod) {
+        revert InsufficientBalance();
+    }
     else {
  for (uint256 index = 0; index < savers.length; index++) {
     if (msg.sender == savers[index]){
@@ -90,8 +100,11 @@ function startRotationSaving() public  {
 uint256 timeInterval = block.timestamp + contributionPeriod;
 while (block.timestamp < timeInterval)
     for(uint256 index = 0; index<savers.length; index++ ) {
-
-    
+     bool success = IERC20(tokenAddress).transferFrom(savers[index],address(this),contributionAmountPerPeriod);
+     emit contributionDeducted(savers[index],contributionAmountPerPeriod);
+     if(!success) {
+        revert savingFailed();
+     }
 }
 
 }

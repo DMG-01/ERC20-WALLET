@@ -6,6 +6,7 @@ pragma solidity ^0.8.0;
 import { IERC20 } from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {AggregatorV3Interface} from "lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {AggregatorV3Interface} from "lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract Wallet is ReentrancyGuard{
 
@@ -65,6 +66,8 @@ event tokenWithdrawnFromLock(address indexed user, address indexed tokenWithdraw
 event swapTokenFunctionHasBeenInitiated(address indexed caller, address indexed userTwo, uint256  callerAmount, uint256  userTwoAmount, address  callerTokenAddress, address  userTwoTokenAddress);
 event tokenSwapSuccessful(address indexed caller, address indexed userTwo, uint256  callerAmount, uint256  userTwoAmount, address  callerTokenAddress, address  userTwoTokenAddress);
 event etherHasBeenTransfered(address indexed recepient, uint256 amount, uint256 time);
+event tokenHasApproachedSetPrice(address indexed tokenAddress, uint256 setAmount, uint256 currentTokenPrice);
+event tokenHasNotApproachedSetPrice(address indexed tokenAddress,uint256 setAmount, uint256 currentAmount);
 address public owner ;
 /**
  * modifiers that are used in the contract 
@@ -268,7 +271,16 @@ function sendEther(address payable recepient) payable public nonReentrant() {
 emit etherHasBeenTransfered(recepient,msg.value,block.timestamp);
 }
 }
-
+function alertTokenPrice(uint256 setAmount, address tokenAddress) public {
+AggregatorV3Interface priceFeed = AggregatorV3Interface(tokenAddressToPriceFeedAddress[tokenAddress]);
+(,int256 price,,,) = priceFeed.latestRoundData();
+   if (uint256(price) >= setAmount) {
+     emit tokenHasApproachedSetPrice(tokenAddress,setAmount, uint256(price));
+   }
+   else {
+    emit tokenHasNotApproachedSetPrice(tokenAddress,setAmount,uint256(price));
+   }
+}
 /*****************GETTER
  *               FUNCTIONS
  *******************************/

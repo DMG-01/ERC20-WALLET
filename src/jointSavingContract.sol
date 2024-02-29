@@ -30,6 +30,7 @@ error notAMember();
 
       /*EVENTS */
 event contributionDeducted(address saver, uint256 amount);
+event rotationSavingHasCommenced();
 
 
 Wallet wallet;
@@ -66,6 +67,7 @@ owner = msg.sender;
 
 uint8 initialParameterCount = 0;
 address[] savers;
+address[] defaulters;
 
 // function for owner to set the initial parameter
 function setInitialParameter(uint256 _numberOfParticipant, address _tokenAddress, uint256 _contributionPeriod,uint256 _amountPerPeriod) onlyOwner public  {
@@ -109,7 +111,9 @@ function join() public  {
 }
 
 function pay() public member {
-    
+     if(isSavingOngoing != true) {
+        revert cantJoinSavingIsOngoing();
+     }
    bool success = IERC20(tokenAddress).transferFrom(msg.sender,address(this), contributionAmountPerPeriod);
    emit contributionDeducted(msg.sender, contributionAmountPerPeriod);
    saved[msg.sender] = true;
@@ -118,15 +122,30 @@ function pay() public member {
    }
 }
 
-// check if initial number of savers are met up before starting
+
 
 //allow each member to pay themselves
 //whosoever hasnt paid in the time frame would be kicked out
 
-function startRotationSaving() public  {
+// check if initial number of savers are met up before starting
+function startRotationSaving() public member {
+if (savers.length != numberOfParticipant){
+    revert numberOfParticipantNotComplete();
+} 
+uint256 startime = block.timestamp;
+emit rotationSavingHasCommenced();
 
-
+if (block.timestamp > startime + contributionPeriod) {
+    for (uint256 index = 0; index < savers.length; index++ ) {
+        if(saved[savers[index]] == false){
+        defaulters.push(savers[index]);
+        }
+    }
 }
+
+isSavingOngoing = true;
+}
+
 // functions for users to vote on a set of parameter after each round 
 
 

@@ -25,9 +25,12 @@ error cantJoinSavingIsOngoing();
 error numberOfParticipantNotComplete();
 error InsufficientBalance();
 error savingFailed();
+error transferFailed();
+error notAMember();
 
       /*EVENTS */
 event contributionDeducted(address saver, uint256 amount);
+
 
 Wallet wallet;
 address immutable owner;
@@ -39,12 +42,23 @@ uint256 numberOfRotation;
 bool isSavingOngoing = false;
 uint256 expectedAmount; 
 
+mapping(address => bool) saved;
+
 modifier onlyOwner() {
     if (msg.sender != owner){
         revert onlyOwnerCanCallThisFunction();
     }
     _;
 } 
+
+modifier member() {
+    for (uint256 index = 0; index< savers.length; index++) {
+         if(msg.sender != savers[index]) {
+            revert notAMember();
+         }
+    }
+    _;
+}
  
  constructor() {
 owner = msg.sender;
@@ -63,6 +77,7 @@ function setInitialParameter(uint256 _numberOfParticipant, address _tokenAddress
  tokenAddress = _tokenAddress;
  contributionPeriod = _contributionPeriod;
  contributionAmountPerPeriod = _amountPerPeriod;
+ saved[msg.sender] = false;
  savers.push(msg.sender);
 }
 
@@ -89,23 +104,27 @@ function join() public  {
     }
  }
  savers.push(msg.sender);
+ saved[msg.sender] = false;
     }
 }
 
-// check if initial number of savers are met up before starting
-function startRotationSaving() public  {
-    if(numberOfParticipant != savers.length) {
-      revert numberOfParticipantNotComplete();
-    }
-uint256 timeInterval = block.timestamp + contributionPeriod;
-while (block.timestamp < timeInterval)
-    for(uint256 index = 0; index<savers.length; index++ ) {
-     bool success = IERC20(tokenAddress).transferFrom(savers[index],address(this),contributionAmountPerPeriod);
-     emit contributionDeducted(savers[index],contributionAmountPerPeriod);
-     if(!success) {
-        revert savingFailed();
-     }
+function pay() public member {
+    
+   bool success = IERC20(tokenAddress).transferFrom(msg.sender,address(this), contributionAmountPerPeriod);
+   emit contributionDeducted(msg.sender, contributionAmountPerPeriod);
+   saved[msg.sender] = true;
+   if(!success) {
+    revert transferFailed();
+   }
 }
+
+// check if initial number of savers are met up before starting
+
+//allow each member to pay themselves
+//whosoever hasnt paid in the time frame would be kicked out
+
+function startRotationSaving() public  {
+
 
 }
 // functions for users to vote on a set of parameter after each round 

@@ -38,10 +38,12 @@ address immutable owner;
 uint256  numberOfParticipant;
 address  tokenAddress;
 uint256 contributionPeriod;
+uint256 timeForEachRotation;
 uint256 contributionAmountPerPeriod;
-uint256 numberOfRotation;
+uint256 numberOfRotation = savers.length;
 bool isSavingOngoing = false;
 uint256 expectedAmount; 
+uint256 totalAmountExpected = numberOfParticipant * contributionAmountPerPeriod;
 
 mapping(address => bool) saved;
 
@@ -70,7 +72,7 @@ address[] savers;
 address[] defaulters;
 
 // function for owner to set the initial parameter
-function setInitialParameter(uint256 _numberOfParticipant, address _tokenAddress, uint256 _contributionPeriod,uint256 _amountPerPeriod) onlyOwner public  {
+function setInitialParameter(uint256 _numberOfParticipant, address _tokenAddress, uint256 _contributionPeriod,uint256 _amountPerPeriod, uint256 _timeForEachRotation) onlyOwner public  {
  if(initialParameterCount != 0){
     revert prametersCanOnlyBeSetOnce();
  }
@@ -79,6 +81,7 @@ function setInitialParameter(uint256 _numberOfParticipant, address _tokenAddress
  tokenAddress = _tokenAddress;
  contributionPeriod = _contributionPeriod;
  contributionAmountPerPeriod = _amountPerPeriod;
+ timeForEachRotation =_timeForEachRotation;
  saved[msg.sender] = false;
  savers.push(msg.sender);
 }
@@ -96,7 +99,7 @@ function join() public  {
     if( isSavingOngoing == true) {
         revert cantJoinSavingIsOngoing();
     }
-    else if(wallet.getUserTokenBalance(tokenAddress) < contributionAmountPerPeriod) {
+    else if(wallet.getUserTokenBalance(tokenAddress) < totalAmountExpected)  {
         revert InsufficientBalance();
     }
     else {
@@ -132,18 +135,41 @@ function startRotationSaving() public member {
 if (savers.length != numberOfParticipant){
     revert numberOfParticipantNotComplete();
 } 
-uint256 startime = block.timestamp;
+//loop all the rotation
+// loop each rotation
+//uint256 startime = block.timestamp;
 emit rotationSavingHasCommenced();
+uint256 rotationCount = 0;
+uint256 perRotationStartTime = 0;
+uint256 perRotationEndTime = perRotationStartTime + timeForEachRotation;
+isSavingOngoing = true;
 
-if (block.timestamp > startime + contributionPeriod) {
-    for (uint256 index = 0; index < savers.length; index++ ) {
-        if(saved[savers[index]] == false){
+while (rotationCount <= numberOfRotation) {
+       
+       if(block.timestamp > perRotationEndTime)  {
+
+        for (uint256 index = 0; index < savers.length; index++ ) {
+        if(saved[savers[index]] == false) {
+            if(wallet.getUserTokenBalance(tokenAddress) < (numberOfParticipant * savers.length)) {
         defaulters.push(savers[index]);
+        savers[index] = savers[savers.length - 1];
+        savers.pop();
         }
+    } else {
+        IERC20(tokenAddress).transferFrom(savers[index], address(this), contributionAmountPerPeriod);
     }
+        }
+    perRotationStartTime = block.timestamp;
+    perRotationEndTime  = perRotationStartTime + timeForEachRotation;
+    rotationCount++;
+    for(uint256 index = 0; index < savers.length; index++) {
+        saved[savers[index]] = false; 
+    }
+       }
+    
 }
 
-isSavingOngoing = true;
+isSavingOngoing = false;
 }
 
 // functions for users to vote on a set of parameter after each round 

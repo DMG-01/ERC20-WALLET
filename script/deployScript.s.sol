@@ -11,14 +11,14 @@ import {NumberOfGoals} from "chance/numberOfGoals.sol";
 contract DeployScript is Script {
   string _name = "name";
 
-    function run() external returns(Main/*, CourseWinOrLose, HomeAwayDraw, NumberOfGoals*/){
+    function run() external returns(Main, CourseWinOrLose, HomeAwayDraw, NumberOfGoals){
     
     vm.startBroadcast();
     Main mainWallet = new Main();
-   // CourseWinOrLose courseWinOrLose = new CourseWinOrLose(_name);
-   // HomeAwayDraw homeAwayDraw = new HomeAwayDraw(_name);
-    //NumberOfGoals numberOfGoals = new NumberOfGoals(_name);
+    CourseWinOrLose courseWinOrLose = new CourseWinOrLose(_name);
+    HomeAwayDraw homeAwayDraw = new HomeAwayDraw(_name);
+    NumberOfGoals numberOfGoals = new NumberOfGoals(_name);
     vm.stopBroadcast();
-    return(mainWallet/*,courseWinOrLose,homeAwayDraw,numberOfGoals*/);
+    return(mainWallet,courseWinOrLose,homeAwayDraw,numberOfGoals);
     }
 }

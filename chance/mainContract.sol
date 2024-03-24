@@ -94,7 +94,7 @@ function create_HAD_contract(string memory _name) public onlyOwner returns(strin
         return (i_owner);
     }
     uint256 number = 0;
-    function addnumber() public  returns(uint256){
+    function addnumber() public view returns(uint256){
         uint256 newNumber =  number + 7;
         return newNumber;
     }

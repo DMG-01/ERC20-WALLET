@@ -27,6 +27,7 @@ error InsufficientBalance();
 error savingFailed();
 error transferFailed();
 error notAMember();
+error savingIsOngoing();
 
       /*EVENTS */
 event contributionDeducted(address saver, uint256 amount);
@@ -39,13 +40,15 @@ uint256  numberOfParticipant;
 address  tokenAddress;
 uint256 contributionPeriod;
 uint256 timeForEachRotation;
-uint256 contributionAmountPerPeriod;
+uint256 contributionAmountPerPeriod ;
+uint256 totalcontributionAmountPerPeriod = contributionAmountPerPeriod * numberOfParticipant;
 uint256 numberOfRotation = savers.length;
 bool isSavingOngoing = false;
-uint256 expectedAmount; 
+uint256 expectedAmount = numberOfParticipant * contributionAmountPerPeriod; 
 uint256 totalAmountExpected = numberOfParticipant * contributionAmountPerPeriod;
 
 mapping(address => bool) saved;
+mapping(address => bool) hasBeenPaid;
 
 modifier onlyOwner() {
     if (msg.sender != owner){
@@ -76,12 +79,13 @@ function setInitialParameter(uint256 _numberOfParticipant, address _tokenAddress
  if(initialParameterCount != 0){
     revert prametersCanOnlyBeSetOnce();
  }
- initialParameterCount = 0;
+ initialParameterCount = 1;
  numberOfParticipant = _numberOfParticipant;
  tokenAddress = _tokenAddress;
  contributionPeriod = _contributionPeriod;
  contributionAmountPerPeriod = _amountPerPeriod;
  timeForEachRotation =_timeForEachRotation;
+totalcontributionAmountPerPeriod = contributionAmountPerPeriod * numberOfParticipant;
  saved[msg.sender] = false;
  savers.push(msg.sender);
 }
@@ -89,10 +93,7 @@ function setInitialParameter(uint256 _numberOfParticipant, address _tokenAddress
 function eligibility() internal {
 
 }
-function getExpectedAmount() public returns(uint256) {
- expectedAmount = contributionAmountPerPeriod * savers.length;
-return (expectedAmount);
-}
+
 
 
 function join() public  {
@@ -117,12 +118,11 @@ function pay() public member {
      if(isSavingOngoing != true) {
         revert cantJoinSavingIsOngoing();
      }
-   bool success = IERC20(tokenAddress).transferFrom(msg.sender,address(this), contributionAmountPerPeriod);
+   wallet.sendToken(tokenAddress, contributionAmountPerPeriod, address(this));
    emit contributionDeducted(msg.sender, contributionAmountPerPeriod);
    saved[msg.sender] = true;
-   if(!success) {
-    revert transferFailed();
-   }
+   hasBeenPaid[msg.sender] = false ;
+  
 }
 
 
@@ -147,7 +147,7 @@ isSavingOngoing = true;
 while (rotationCount <= numberOfRotation) {
        
        if(block.timestamp > perRotationEndTime)  {
-
+         paySavers();
         for (uint256 index = 0; index < savers.length; index++ ) {
         if(saved[savers[index]] == false) {
             if(wallet.getUserTokenBalance(tokenAddress) < (numberOfParticipant * savers.length)) {
@@ -156,7 +156,8 @@ while (rotationCount <= numberOfRotation) {
         savers.pop();
         }
     } else {
-        IERC20(tokenAddress).transferFrom(savers[index], address(this), contributionAmountPerPeriod);
+        //IERC20(tokenAddress).transferFrom(savers[index], address(this), contributionAmountPerPeriod);
+        wallet.sendToken(tokenAddress, contributionAmountPerPeriod, address(this));
     }
         }
     perRotationStartTime = block.timestamp;
@@ -172,8 +173,22 @@ while (rotationCount <= numberOfRotation) {
 isSavingOngoing = false;
 }
 
+function paySavers() internal {
+bool paidSomeone = false;
+for(uint256 index = 0; index < savers.length; index++) {
+    if(hasBeenPaid[savers[index]] == false) {
+        wallet.sendToken(tokenAddress, expectedAmount, savers[index]);
+        paidSomeone = true;
+        break;
+    }
+}
+}
 // functions for users to vote on a set of parameter after each round 
 
-
+function voteNextRound() public {
+    if(isSavingOngoing != false) {
+        revert savingIsOngoing();
+    }
+}
 
 }

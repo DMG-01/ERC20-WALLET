@@ -42,6 +42,12 @@ modifier initiateCWOL() {
     _;
 }
 
+modifier betPlaced() {
+     vm.startPrank(USER1);
+     courseWinOrLose.bet{value:BET_AMOUNT}(true);
+     _;
+}
+
 function setUp() public {
     deployer = new DeployScript();
     (mainContract,courseWinOrLose,homeAwayDraw,numberOfGoals) = deployer.run();
@@ -154,4 +160,10 @@ function testCWOLBetWorks() public initiateCWOL{
      bool hasBet = courseWinOrLose.hasUserBet();
      assertEq(hasBet, true);
 } 
+function testBettingTwiceReverts() public betPlaced {
+vm.startPrank(USER1);
+vm.expectRevert(CourseWinOrLose.youHaveAlreadyPlacedAbet.selector);
+courseWinOrLose.bet{value:BET_AMOUNT}(true);
+}
+
 }

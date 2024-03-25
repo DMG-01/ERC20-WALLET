@@ -18,6 +18,7 @@ pragma solidity ^0.8.0;
      error noBetWasFound();
      error thisContractHasBeenLocked();
      error userHasBeenPaid();
+     error invalidAmountPassed();
 
 
      /*****EVENTS */
@@ -42,7 +43,7 @@ pragma solidity ^0.8.0;
      uint256 _totalBetFor;
      uint256 _totalBetAgainst;
      uint256 total;
-     uint256 protocolCut;
+     uint256 protocolCut = 1;
 
     //
      address[] _addressesBetFor;
@@ -83,28 +84,35 @@ pragma solidity ^0.8.0;
     if(addressToHasUserBet[msg.sender] == true) {
         revert youHaveAlreadyPlacedAbet();
     }
-    usersToBet[msg.sender] = _bet;
-    addressToHasUserBet[msg.sender] = true;
-    hasBeenPaid[msg.sender] = false;
-    addressToAmountPlaced[msg.sender] = msg.value - ((protocolCut * msg.value)/100);
-    total += msg.value - ((protocolCut * msg.value)/100);
+
+    // Ensure that protocolCut is not zero to prevent division by zero
+    require(protocolCut != 0, "Protocol cut should not be zero");
+
+    // Calculate the bet amount after subtracting the protocol cut
+    uint256 betAmount = msg.value - ((protocolCut * msg.value) / 100);
+    total += betAmount;
 
     if(_bet == true) {
-        _totalBetFor += ((protocolCut/msg.value)* 100);
+        _totalBetFor += betAmount;
         _addressesBetFor.push(msg.sender);
-     emit  betHasBeenPlaced(msg.sender, addressToAmountPlaced[msg.sender], true);
-    }
-    else {
-        _totalBetAgainst += ((protocolCut/msg.value)* 100);
+        emit betHasBeenPlaced(msg.sender, betAmount, true);
+    } else {
+        _totalBetAgainst += betAmount;
         _addressesBetAgainst.push(msg.sender);
-       emit  betHasBeenPlaced(msg.sender, addressToAmountPlaced[msg.sender], false);
+        emit betHasBeenPlaced(msg.sender, betAmount, false);
     }
 
+    // Mark the user as having placed a bet
+    usersToBet[msg.sender] = _bet;
+    addressToHasUserBet[msg.sender] = true;
 }
 
 function addToBet() public payable hasContractBeenLocked {
         if(addressToHasUserBet[msg.sender] == true){
             revert youHaveAlreadyPlacedAbet();
+        }
+        if(msg.value <= 0) {
+            revert invalidAmountPassed();
         }
         addressToAmountPlaced[msg.sender] += msg.value - ((protocolCut * msg.value)/100);
         total += msg.value - ((protocolCut * msg.value)/100);
@@ -172,5 +180,15 @@ function lockContract() payable public onlyMainOwners {
     emit contractHasBeenLocked(msg.sender, block.timestamp);
 }
 
+/*******************RETURN FUNCTIONS  */
+function returnContractName() public view returns(string memory ){
+return(contractName);
+}
 
- }
+function hasUserBet() public view returns(bool) {
+ return(addressToHasUserBet[msg.sender]);
+}
+}
+
+
+ 

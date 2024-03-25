@@ -167,8 +167,8 @@ function refund() payable public hasContractBeenLocked  _hasBeenPaid {
     }
  
     addressToHasUserBet[msg.sender] = false;
-    addressToAmountPlaced[msg.sender] = 0;
-    //hasBeenPaid[msg.sender] = true;
+   // addressToAmountPlaced[msg.sender] = 0;
+    hasBeenPaid[msg.sender] = true;
     payable(msg.sender).transfer(addressToAmountPlaced[msg.sender]);
     emit refundHasBeenMade(msg.sender, addressToAmountPlaced[msg.sender]);
 }

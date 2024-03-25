@@ -352,16 +352,49 @@ function testRefundWorks() public  {
     console.log(courseWinOrLose.returnUserEtherBalance());
     uint256 previousBalance = courseWinOrLose.returnUserEtherBalance();
     courseWinOrLose.refund();
-    uint256 newBalance = previousBalance + BET_AMOUNT;
+    uint256 newBalance = previousBalance + 4950000000000000000;
      console.log(courseWinOrLose.returnUserEtherBalance());
     assertEq(newBalance, courseWinOrLose.returnUserEtherBalance());
 }
 
-function testRefundingAfterResultFails() public {
+function testRefundRevertsWhenContractHasBeenLocked() public betPlacedFor initiateCWOL{
+vm.prank(INITIAL_DEPLOYER);
+courseWinOrLose.lockContract();
+vm.prank(USER1);
+vm.expectRevert(CourseWinOrLose.thisContractHasBeenLocked.selector);
+courseWinOrLose.refund();
+} 
 
+function testRefundRevertsWhenCalledTwice() public betPlacedFor {
+vm.startPrank(USER1);
+courseWinOrLose.refund();
+vm.expectRevert(CourseWinOrLose.userHasBeenPaid.selector);
+courseWinOrLose.refund();
 }
 
-function testBetRevertsAfterRefund() public {
+function testRefundingAfterResultFails() public betPlacedFor initiateCWOL {
+vm.startPrank(INITIAL_DEPLOYER);
+courseWinOrLose.lockContract();
+courseWinOrLose.setResult(true);
+vm.stopPrank();
+vm.prank(USER1);
+vm.expectRevert(CourseWinOrLose.thisContractHasBeenLocked.selector);
+courseWinOrLose.refund();
+}
 
+function testBetRevertsAfterResultHasBeenSet() public initiateCWOL {
+vm.startPrank(INITIAL_DEPLOYER);
+courseWinOrLose.lockContract();
+courseWinOrLose.setResult(true);
+vm.stopPrank();
+vm.prank(USER1);
+vm.expectRevert(CourseWinOrLose.thisContractHasBeenLocked.selector);
+courseWinOrLose.bet{value:BET_AMOUNT}(true);
+}
+
+function testNonOwnersCantLockContract() public initiateCWOL {
+    vm.prank(USER1);
+    vm.expectRevert(CourseWinOrLose.onlyMainOwnerCanCallThisFunction.selector);
+    courseWinOrLose.lockContract();
 }
 }

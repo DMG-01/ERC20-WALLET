@@ -19,6 +19,9 @@ DeployScript deployer;
 
 address USER1 = makeAddr("USER1");
 address USER2 = makeAddr("USER2");
+address USER3 = makeAddr("USER3");
+address USER4 = makeAddr("USER4");
+address USER5 = makeAddr("USER5");
 address INITIAL_DEPLOYER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
 
 string ICEwinsbioChem;
@@ -30,9 +33,34 @@ string CWOLName;
 
 
 uint256 BET_AMOUNT = 5 ether;
+uint256 USER2_BET_AMOUNT = 3 ether;
+uint256 USER3_BET_AMOUNT = 7 ether;
+uint256 USER4_BET_AMOUNT = 9 ether;
+uint256 USER5_BET_AMOUNT = 6 ether;
 uint256 STARTING_ETHER_BALANCE = 10 ether;
 
 /************MODIFIER */
+
+modifier simulateBetFor() {
+    vm.startPrank(USER2);
+    vm.deal(USER2,STARTING_ETHER_BALANCE);
+    courseWinOrLose.bet{value:USER2_BET_AMOUNT}(true);
+    vm.stopPrank();
+    vm.startPrank(USER3);
+    vm.deal(USER3,STARTING_ETHER_BALANCE);
+    courseWinOrLose.bet{value:USER3_BET_AMOUNT}(true);
+    _;
+}
+modifier simulateBetAgainst() {
+    vm.startPrank(USER4);
+    vm.deal(USER4, STARTING_ETHER_BALANCE);
+    courseWinOrLose.bet{value:USER4_BET_AMOUNT}(false);
+    vm.stopPrank();
+    vm.startPrank(USER5);
+    vm.deal(USER5,STARTING_ETHER_BALANCE);
+    courseWinOrLose.bet{value:USER5_BET_AMOUNT}(false);
+    _;
+}
 modifier initiateCWOL() {
     vm.startPrank(INITIAL_DEPLOYER);
     (string memory __contractName, address __contractWOLAddress) = mainContract.create_CWOL_contract(ICEwinsbioChem);
@@ -42,7 +70,7 @@ modifier initiateCWOL() {
     _;
 }
 
-modifier betPlaced() {
+modifier betPlacedFor() {
      vm.startPrank(USER1);
      courseWinOrLose.bet{value:BET_AMOUNT}(true);
      _;
@@ -160,10 +188,51 @@ function testCWOLBetWorks() public initiateCWOL{
      bool hasBet = courseWinOrLose.hasUserBet();
      assertEq(hasBet, true);
 } 
-function testBettingTwiceReverts() public betPlaced {
+function testBettingTwiceReverts() public betPlacedFor {
 vm.startPrank(USER1);
 vm.expectRevert(CourseWinOrLose.youHaveAlreadyPlacedAbet.selector);
 courseWinOrLose.bet{value:BET_AMOUNT}(true);
 }
+
+function testBetAmountWorksAsItShould() public betPlacedFor {
+    vm.startPrank(USER1);
+    uint256 expectedAmountPlaced = 4.95 ether;
+    uint256 actualAmount = courseWinOrLose.returnUserAmountPlaced();
+    assertEq(expectedAmountPlaced,actualAmount);
+    assertEq(expectedAmountPlaced, courseWinOrLose.returnTotalBetFor());
+    assertEq(0,courseWinOrLose.returnTotalBetAgainst());
+    assertEq(expectedAmountPlaced, courseWinOrLose.returnTotalBet());
+}
+
+function testBetAmountWorksAsItShould2() public betPlacedFor simulateBetFor {
+    vm.startPrank(USER1);
+    uint256 expectedAmountPlaced = 4.95 ether;
+    uint256 actualAmount = courseWinOrLose.returnUserAmountPlaced();
+    uint256 expectedTotalAmount = 14.85 ether;
+    assertEq(expectedTotalAmount, courseWinOrLose.returnTotalBet());
+    assertEq(expectedTotalAmount, courseWinOrLose.returnTotalBetFor());
+    assertEq(0,courseWinOrLose.returnTotalBetAgainst());
+    assertEq(expectedAmountPlaced,actualAmount);
+}
+
+function testBetWorksAsItShouldBe() public betPlacedFor simulateBetAgainst simulateBetFor {
+    vm.startPrank(USER1);
+    uint256 expectedAmountPlaced = 4950000000000000000; // Convert 4.95 ether to wei
+    uint256 actualAmount = courseWinOrLose.returnUserAmountPlaced();
+    uint256 expectedTotalAmount = 29700000000000000000; // Convert 29.7 ether to wei
+    uint256 actualTotalAmount = courseWinOrLose.returnTotalBet();
+    uint256 expectedTotalBetFor = 14850000000000000000; // Convert 14.85 ether to wei
+    uint256 actualTotalBetFor = courseWinOrLose.returnTotalBetFor();
+    uint256 expectedTotalBetAgainst = 14850000000000000000; // Convert 14.85 ether to wei
+    uint256 actualTotalBetAgainst = courseWinOrLose.returnTotalBetAgainst();
+
+    assertEq(expectedAmountPlaced, actualAmount);
+    assertEq(expectedTotalAmount, actualTotalAmount);
+    assertEq(expectedTotalBetFor, actualTotalBetFor);
+    assertEq(expectedTotalBetAgainst, actualTotalBetAgainst);
+}
+
+
+
 
 }

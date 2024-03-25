@@ -95,6 +95,7 @@ pragma solidity ^0.8.0;
     if(_bet == true) {
         _totalBetFor += betAmount;
         _addressesBetFor.push(msg.sender);
+        addressToAmountPlaced[msg.sender] = betAmount;
         emit betHasBeenPlaced(msg.sender, betAmount, true);
     } else {
         _totalBetAgainst += betAmount;
@@ -187,6 +188,19 @@ return(contractName);
 
 function hasUserBet() public view returns(bool) {
  return(addressToHasUserBet[msg.sender]);
+}
+
+function returnTotalBetFor() public view returns(uint256) {
+    return(_totalBetFor);
+}
+function returnTotalBetAgainst() public view returns(uint256) {
+    return(_totalBetAgainst);
+}
+function returnTotalBet() public view returns(uint256) {
+    return(total);
+}
+function returnUserAmountPlaced() public view returns(uint256) {
+    return(addressToAmountPlaced[msg.sender]);
 }
 }
 

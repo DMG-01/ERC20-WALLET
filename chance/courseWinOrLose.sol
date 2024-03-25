@@ -13,7 +13,7 @@ pragma solidity ^0.8.0;
      /**ERRORS */
      error onlyMainOwnerCanCallThisFunction();
      error cantSetResultUsersCanStillBet();
-     error youLostTheBet();
+     error youCantWithdraw();
      error youHaveAlreadyPlacedAbet();
      error noBetWasFound();
      error thisContractHasBeenLocked();
@@ -109,9 +109,6 @@ pragma solidity ^0.8.0;
 }
 
 function addToBet() public payable hasContractBeenLocked {
-        if(addressToHasUserBet[msg.sender] == true){
-            revert youHaveAlreadyPlacedAbet();
-        }
         if(msg.value <= 0) {
             revert invalidAmountPassed();
         }
@@ -136,7 +133,7 @@ function payOut() payable public _hasBeenPaid {
         emit payOutHasBeenMade(msg.sender, ((addressToAmountPlaced[msg.sender])* total )/_totalBetFor);
        
     } else {
-        revert youLostTheBet();//change to you cant withdraw
+        revert youCantWithdraw();//change to you cant withdraw
     }
     }else {
         revert noBetWasFound();
@@ -168,10 +165,10 @@ function refund() payable public hasContractBeenLocked  _hasBeenPaid {
     if(addressToHasUserBet[msg.sender] != true) {
         revert noBetWasFound();
     }
- //check if bet has not ended
+ 
     addressToHasUserBet[msg.sender] = false;
     addressToAmountPlaced[msg.sender] = 0;
-    hasBeenPaid[msg.sender] = true;
+    //hasBeenPaid[msg.sender] = true;
     payable(msg.sender).transfer(addressToAmountPlaced[msg.sender]);
     emit refundHasBeenMade(msg.sender, addressToAmountPlaced[msg.sender]);
 }
@@ -201,6 +198,18 @@ function returnTotalBet() public view returns(uint256) {
 }
 function returnUserAmountPlaced() public view returns(uint256) {
     return(addressToAmountPlaced[msg.sender]);
+}
+function returnUserEtherBalance() public view returns(uint256) {
+    return (msg.sender.balance);
+}
+function returnResult() public view returns(bool) {
+    return(thisContractToResult[address(this)]);
+}
+function returnProtocolCut() public view returns(uint256) {
+    return(protocolCut);
+}
+function returnIsOwner() public view returns(bool) {
+    return(addressToOwner[msg.sender]);
 }
 }
 

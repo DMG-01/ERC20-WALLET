@@ -40,6 +40,13 @@ uint256 USER5_BET_AMOUNT = 6 ether;
 uint256 STARTING_ETHER_BALANCE = 10 ether;
 
 /************MODIFIER */
+modifier initiateCWOLAndSetResult() {
+     vm.startPrank(INITIAL_DEPLOYER);
+    mainContract.create_CWOL_contract(ICEwinsbioChem);
+    courseWinOrLose.lockContract();
+    courseWinOrLose.setResult(true);
+    _;
+}
 
 modifier simulateBetFor() {
     vm.startPrank(USER2);
@@ -232,7 +239,129 @@ function testBetWorksAsItShouldBe() public betPlacedFor simulateBetAgainst simul
     assertEq(expectedTotalBetAgainst, actualTotalBetAgainst);
 }
 
+function testAddToBet() public betPlacedFor {
+    vm.startPrank(USER1);
+    courseWinOrLose.addToBet{value:3 ether}();
+    uint256 expectedAmount = 7920000000000000000;
+    uint256 actualAmount = courseWinOrLose.returnTotalBet();
+    uint256 actualTotalAmount = courseWinOrLose.returnTotalBet();
+    uint256 actualTotalBetFor = courseWinOrLose.returnTotalBetFor();
+    assertEq(expectedAmount, actualTotalAmount);
+    assertEq(expectedAmount,actualTotalBetFor);
+    assertEq(expectedAmount,actualAmount);
+}
 
+function testAddToBetRevertsWithZeroAmountPassed() public betPlacedFor {
+vm.startPrank(USER1);
+vm.expectRevert(CourseWinOrLose.invalidAmountPassed.selector);
+courseWinOrLose.addToBet{value:0}();
+}
 
+function testPayOutWouldRevertWhenScoresHaveNotBeenAdded() public betPlacedFor simulateBetAgainst simulateBetFor {
+    vm.startPrank(USER1);
+    vm.expectRevert(CourseWinOrLose.youCantWithdraw.selector);
+    courseWinOrLose.payOut();
+}
 
+function testPayOutRevertsIfUserDoesntPlaceAbet() public {
+    vm.startPrank(USER1);
+    vm.expectRevert(CourseWinOrLose.noBetWasFound.selector);
+    courseWinOrLose.payOut();
+}
+function testPayOutRevertsWhenPlayerLosesBet() public betPlacedFor simulateBetAgainst simulateBetFor{
+    vm.startPrank(INITIAL_DEPLOYER);
+    mainContract.create_CWOL_contract(ICEwinsbioChem);
+    courseWinOrLose.lockContract();
+    courseWinOrLose.setResult(false);
+    vm.stopPrank();
+    vm.startPrank(USER1);
+    vm.expectRevert(CourseWinOrLose.youCantWithdraw.selector);
+    courseWinOrLose.payOut();
+}
+function testPayOutWorksWhenUserWinsBet() public betPlacedFor simulateBetAgainst simulateBetFor {
+     vm.startPrank(INITIAL_DEPLOYER);
+    mainContract.create_CWOL_contract(ICEwinsbioChem);
+    courseWinOrLose.lockContract();
+    courseWinOrLose.setResult(true);
+    vm.stopPrank();
+    vm.startPrank(USER1);
+    uint256 userPreviousBalance = courseWinOrLose.returnUserEtherBalance();
+    courseWinOrLose.payOut();
+   uint256 userExpectedNewBalance = userPreviousBalance + 9900000000000000000;
+    uint256 actualUserPayOut = courseWinOrLose.returnUserEtherBalance();
+    assertEq(userExpectedNewBalance,actualUserPayOut);
+}
+
+function testCantSetResultWhileContractIsNotLocked() public {
+    vm.startPrank(INITIAL_DEPLOYER);
+    mainContract.create_CWOL_contract(ICEwinsbioChem);
+    vm.expectRevert(CourseWinOrLose.cantSetResultUsersCanStillBet.selector);
+    courseWinOrLose.setResult(true);
+}
+
+function testSetResultWorks() public  initiateCWOLAndSetResult{
+bool expectedResult = true;
+bool actualResult = courseWinOrLose.returnResult();
+assertEq(expectedResult, actualResult);
+}
+function testNonOwnersCantSetResult() public initiateCWOL {
+    vm.startPrank(USER1);
+    vm.expectRevert(CourseWinOrLose.onlyMainOwnerCanCallThisFunction.selector);
+    courseWinOrLose.setResult(true);
+}
+
+function testNonOwnersCantChangeProtocolCut() public initiateCWOL {
+    vm.startPrank(USER1);
+    vm.expectRevert(CourseWinOrLose.onlyMainOwnerCanCallThisFunction.selector);
+    courseWinOrLose.changeProtocolCut(10);
+
+}
+
+function testChangeProtocolCut() public initiateCWOL {
+    vm.startPrank(INITIAL_DEPLOYER);
+    courseWinOrLose.changeProtocolCut(10);
+    assertEq(courseWinOrLose.returnProtocolCut(),10);
+}
+
+function testNonOwnersCantAddOwner() public initiateCWOL {
+    vm.startPrank(USER1);
+    vm.expectRevert(CourseWinOrLose.onlyMainOwnerCanCallThisFunction.selector);
+    courseWinOrLose.addOwner(USER2);
+}
+function testCWOLAddOwnerWorks() public initiateCWOL {
+    vm.startPrank(INITIAL_DEPLOYER);
+    courseWinOrLose.addOwner(USER1);
+    vm.stopPrank();
+    vm.startPrank(USER1);
+    assertEq(true,courseWinOrLose.returnIsOwner());
+}
+
+function testRefundRevertsWhenUserHasNotBet() public initiateCWOL {
+vm.startPrank(USER1);
+vm.expectRevert(CourseWinOrLose.noBetWasFound.selector);
+courseWinOrLose.refund();
+}
+
+function testRefundWorks() public  {
+     vm.startPrank(INITIAL_DEPLOYER);
+    (string memory __contractName, address __contractWOLAddress) = mainContract.create_CWOL_contract(ICEwinsbioChem);
+    vm.stopPrank();
+    vm.startPrank(USER1);
+    console.log(courseWinOrLose.returnUserEtherBalance());
+    courseWinOrLose.bet{value:BET_AMOUNT}(true);
+    console.log(courseWinOrLose.returnUserEtherBalance());
+    uint256 previousBalance = courseWinOrLose.returnUserEtherBalance();
+    courseWinOrLose.refund();
+    uint256 newBalance = previousBalance + BET_AMOUNT;
+     console.log(courseWinOrLose.returnUserEtherBalance());
+    assertEq(newBalance, courseWinOrLose.returnUserEtherBalance());
+}
+
+function testRefundingAfterResultFails() public {
+
+}
+
+function testBetRevertsAfterRefund() public {
+
+}
 }

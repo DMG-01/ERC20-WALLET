@@ -111,4 +111,13 @@ contract numberOfGoals is Test {
         vm.expectRevert(NumberOfGoals.noBetFound.selector);
         numberOfGoal.payOut();
     }
+    function testPayOutRevertsWhenClickedMoreThanOnce() public initiateNumberOfGoals placeBet  {
+        vm.startPrank(INITIAL_DEPLOYER);
+        numberOfGoal.setLockGame();
+        numberOfGoal.setResult(USER1_NOG_BET);
+        vm.startPrank(USER1);
+        numberOfGoal.payOut();
+        vm.expectRevert(NumberOfGoals.thisUserHasBeenPaid.selector);
+        numberOfGoal.payOut();
+    }
     }

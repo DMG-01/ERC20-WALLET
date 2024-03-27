@@ -27,7 +27,7 @@ error invalidAmountPassed();
 event betAmountHasIncreased(address _caller, uint256 _newAmount);
 event betHasBeenPlaced(address _caller,uint256 _numberOfGoals, uint256 amount);
 event refundHasBeenMade(address _caller, uint256 _amountPaid);
-event errorHaveBeenPaid(address _caller, uint256 _amount );
+event userHaveBeenPaid(address _caller, uint256 _amount );
 event resultHasBeenPaid(address _caller, uint256 amount);
 event newOwnerAdded(address _caller, address newOwner);
 event protocolCutHasBeenSet(address _caller, uint256 _protocolCut);
@@ -111,20 +111,18 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
     }
 
 
-   function payOut() public {
+   function payOut() public  {
+    
     if(userToHasBet[msg.sender] != true) {
-        revert noBetFound();
+      revert thisUserHasBeenPaid();
     }
     if((contractToNumberOfGoal[address(this)]) == (userToNumberOfGoals[msg.sender])) {
-       if(hasBeenPaid[msg.sender] == false) {
         hasBeenPaid[msg.sender] = true;
         userToHasBet[msg.sender] = false;
-        userToAmountBet[msg.sender] = 0;
+        //userToAmountBet[msg.sender] = 0;
         payable(msg.sender).transfer((userToAmountBet[msg.sender]*totalAmountStaked)/ numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]]);
-        emit errorHaveBeenPaid(msg.sender,(userToAmountBet[msg.sender]*totalAmountStaked)/ numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]] );
-       }
-    }else {
-      revert thisUserHasBeenPaid();
+        emit userHaveBeenPaid(msg.sender,(userToAmountBet[msg.sender]*totalAmountStaked)/ numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]] );
+       
     }
 
    }

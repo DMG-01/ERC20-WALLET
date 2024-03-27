@@ -288,4 +288,16 @@ contract HAD_Test is Test {
     assertEq(true, homeAwayDraw.checkIfAddressIsOwner(USER1));
    }
 
+   function testNonOnwersCanLockContract() public initiateHADContract {
+    vm.startPrank(USER1);
+    vm.expectRevert(HomeAwayDraw.onlyOwnerCanCallThisFunction.selector);
+    homeAwayDraw.lockContract();
+   }
+
+   function testLockContractWorks() public initiateHADContract {
+    vm.startPrank(INITIAL_DEPLOYER);
+    homeAwayDraw.lockContract();
+    assertEq(true,homeAwayDraw.checkContractLockState());
+   } 
+
 }

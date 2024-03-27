@@ -207,4 +207,8 @@ contract HomeAwayDraw {
      function checkIfAddressIsOwner(address _addressToCheck) view public returns(bool) {
         return (addressToOwnership[_addressToCheck]);
      }
+
+     function checkContractLockState() public view returns(bool) {
+        return(LockContract[address(this)]);
+     }
 }

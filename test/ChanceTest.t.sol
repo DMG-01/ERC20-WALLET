@@ -408,7 +408,11 @@ function testAddToBetRevertsWhenNoBetIsFound() public initiateCWOL {
     courseWinOrLose.addToBet{value:BET_AMOUNT}();
 }
 
-function testWhenUserRefundsChangesAreDoneAsItShould() public {}
+function testWhenUserRefundsChangesAreDoneAsItShould() public  initiateCWOL betPlacedFor{ 
+    vm.startPrank(USER1);
+    courseWinOrLose.refund();
+    assertEq(0,courseWinOrLose.returnTotalBetFor());
+}
 
 /*************HOME AWAY DRAW CONTRACT */
 

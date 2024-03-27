@@ -24,7 +24,7 @@ address USER4 = makeAddr("USER4");
 address USER5 = makeAddr("USER5");
 address INITIAL_DEPLOYER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
 
-string ICEwinsbioChem;
+string ICEwinsbioChem = "ICEWinsbioChem";
 string ICEScores5goals;
 string ICEHAD;
 
@@ -97,8 +97,12 @@ function testDeployerIsFirstOwner() public {
    //vm.stopPrank();
    assertEq(actualAddress,USER1);
 }
-*/
 
+function testReturnsActualContractString() public initiateCWOL{
+string memory expectedName = courseWinOrLose.returnContractName();
+assertEq(expectedName,ICEwinsbioChem);
+}
+*/
 function testReturnDeployer() view public {
     address addressDeployer = mainContract.returnFirstOwner();
     mainContract.returnLengthOfOwnersArray();
@@ -397,4 +401,16 @@ function testNonOwnersCantLockContract() public initiateCWOL {
     vm.expectRevert(CourseWinOrLose.onlyMainOwnerCanCallThisFunction.selector);
     courseWinOrLose.lockContract();
 }
+
+function testAddToBetRevertsWhenNoBetIsFound() public initiateCWOL {
+    vm.prank(USER1);
+    vm.expectRevert(CourseWinOrLose.noBetWasFound.selector);
+    courseWinOrLose.addToBet{value:BET_AMOUNT}();
+}
+
+function testWhenUserRefundsChangesAreDoneAsItShould() public {}
+
+/*************HOME AWAY DRAW CONTRACT */
+
+
 }

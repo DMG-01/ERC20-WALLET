@@ -112,6 +112,9 @@ function addToBet() public payable hasContractBeenLocked {
         if(msg.value <= 0) {
             revert invalidAmountPassed();
         }
+        if(addressToHasUserBet[msg.sender]== false) {
+            revert noBetWasFound();
+        }
         addressToAmountPlaced[msg.sender] += msg.value - ((protocolCut * msg.value)/100);
         total += msg.value - ((protocolCut * msg.value)/100);
 
@@ -165,9 +168,13 @@ function refund() payable public hasContractBeenLocked  _hasBeenPaid {
     if(addressToHasUserBet[msg.sender] != true) {
         revert noBetWasFound();
     }
+    if(usersToBet[msg.sender] == true) {
+        _totalBetFor -= addressToAmountPlaced[msg.sender];
+    } else if(usersToBet[msg.sender] == false){
+        _totalBetAgainst -= addressToAmountPlaced[msg.sender];
+    }
  
     addressToHasUserBet[msg.sender] = false;
-   // addressToAmountPlaced[msg.sender] = 0;
     hasBeenPaid[msg.sender] = true;
     payable(msg.sender).transfer(addressToAmountPlaced[msg.sender]);
     emit refundHasBeenMade(msg.sender, addressToAmountPlaced[msg.sender]);

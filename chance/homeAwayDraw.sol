@@ -6,7 +6,7 @@ contract HomeAwayDraw {
 
     address i_owner;
     string contractName;
-    uint256 protocolCut;
+    uint256 protocolCut = 1;
     uint256 totalBetAmount;
 
     constructor(string memory _name) {
@@ -24,6 +24,8 @@ contract HomeAwayDraw {
     error userHasBeenPaid();
     error youDidNotWin();
     error amountCanNotBeZeroOrLessThanZero();
+    error invalidAmountPassed();
+    error noBetWasFound();
 
     /********* EVENTS*/
     event betAmountHasIncreased(address _caller, uint256 _newAmount);
@@ -50,7 +52,7 @@ contract HomeAwayDraw {
     }
 
     modifier isLocked() {
-        if(LockContract[msg.sender] == true) {
+        if(LockContract[address(this)] == true) {
             revert gameHasBeenLocked();
         }
         _;
@@ -91,35 +93,47 @@ contract HomeAwayDraw {
         if(hasBet[msg.sender] == true) {
            revert youHaveAlreadyPlacedAbet();
         }
+
+        if(msg.value <= 0) {
+            revert invalidAmountPassed();
+        }
      userToState[msg.sender] = _state;
-     StateToTotalAmountBet[_state] += msg.value - ((protocolCut/100)*msg.value); 
-     userToAmountBet[msg.sender] += msg.value - ((protocolCut/100)*msg.value);
-     totalBetAmount += msg.value - ((protocolCut/100)*msg.value);
+     StateToTotalAmountBet[_state] += msg.value - ((protocolCut * msg.value)/100);
+     userToAmountBet[msg.sender] += msg.value - ((protocolCut * msg.value)/100);
+     totalBetAmount += msg.value - ((protocolCut * msg.value)/100);
      hasBet[msg.sender] = true;
      beenPaid[msg.sender] = false;
      emit newBetHasBeenPlaced(msg.sender,_state,userToAmountBet[msg.sender]);
     }
 
-    function addToBet() payable public HasBet isLocked notZeroOrLessThan(msg.value) {
-      userToAmountBet[msg.sender] +=  msg.value - ((protocolCut/100)*msg.value);
-      StateToTotalAmountBet[userToState[msg.sender]] += msg.value - ((protocolCut/100)*msg.value);
-      totalBetAmount += msg.value - ((protocolCut/100)*msg.value);
+    function addToBet() payable public HasBet isLocked  {
+
+        if(msg.value <= 0) {
+            revert invalidAmountPassed();
+        }
+      userToAmountBet[msg.sender] +=  msg.value - ((protocolCut * msg.value)/100);
+      StateToTotalAmountBet[userToState[msg.sender]] += msg.value - ((protocolCut * msg.value)/100);
+      totalBetAmount += msg.value - ((protocolCut * msg.value)/100);
       emit betAmountHasIncreased( msg.sender,userToAmountBet[msg.sender]); 
     }
 
-    function refund() public payable HasBet BeenPaid isLocked{
-      State userStateBet = userToState[msg.sender];
-      StateToTotalAmountBet[userStateBet] -= userToAmountBet[msg.sender];
-      userToAmountBet[msg.sender] = 0;
+    function refund() public payable BeenPaid isLocked{
+        if(hasBet[msg.sender] != true) {
+            revert noBetWasFound();
+        }
+      StateToTotalAmountBet[userToState[msg.sender]] -= userToAmountBet[msg.sender];
       hasBet[msg.sender] = false;
       beenPaid[msg.sender] = true;
-      payable(address(this)).transfer(userToAmountBet[msg.sender]);
+      payable(msg.sender).transfer(userToAmountBet[msg.sender]);
       emit refundHasBeenMade(msg.sender,userToAmountBet[msg.sender]);
     }
 
-    function payOut() public HasBet BeenPaid {
+    function payOut() public  BeenPaid {
+        if(hasBet[msg.sender] != true) {
+            revert noBetWasFound();
+        }
        if((result[address(this)]) == (userToState[msg.sender])) {
-          userToAmountBet[msg.sender] = 0;
+          //userToAmountBet[msg.sender] = 0;
           hasBet[msg.sender] = false;
           beenPaid[msg.sender] = true;
           payable(msg.sender).transfer((userToAmountBet[msg.sender] * totalBetAmount) / StateToTotalAmountBet[userToState[msg.sender]]);
@@ -131,7 +145,7 @@ contract HomeAwayDraw {
     }
 
     function setResult(State _resultState) public onlyOwner returns(State) {
-        if(LockContract[msg.sender] != true) {
+        if(LockContract[address(this)] != true) {
             revert cantSetResultGameHasNotBeenLocked();
         }
      result[address(this)] = _resultState;
@@ -153,7 +167,33 @@ contract HomeAwayDraw {
         LockContract[address(this)] = true;
         emit contractHasBeenLocked( msg.sender,block.timestamp); 
     }
+  
+   /******************RETURN FUNCTIONS */
 
+   function returnHasUserBet() public view returns(bool) {
+    return(hasBet[msg.sender]);
+   }
 
+   function returnUserBetState() public view returns(State) {
+    return (userToState[msg.sender]);
+   }
+
+   function returnTotalAmountBet() public view returns(uint256) {
+    return (totalBetAmount);
+   }
+
+   function returnStateTotalAmountBet(State _stateToCheck) public view returns(uint256) {
+    return (StateToTotalAmountBet[_stateToCheck]);
+   }
+     
+    function returnUserBetAmount() public view returns(uint256) {
+        return (userToAmountBet[msg.sender]);
+    }
+    function returnUserPaidState() public view returns(bool) {
+        return (beenPaid[msg.sender]);
+    }
+    function returnUserEtherBalance() public view returns(uint256) {
+        return (msg.sender.balance);
+    }
 
 }

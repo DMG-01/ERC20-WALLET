@@ -81,6 +81,7 @@ contract HomeAwayDraw {
     mapping(address => bool) LockContract;
     mapping(address => State) result;
     mapping(address => bool) beenPaid;
+    mapping(address => bool) isOwner;
 
     enum State {
     home, 
@@ -195,5 +196,15 @@ contract HomeAwayDraw {
     function returnUserEtherBalance() public view returns(uint256) {
         return (msg.sender.balance);
     }
+    function returnResult() view  public returns(State) {
+        return(result[address(this)]);
+    }
 
+    function returnProtocolCut() public view returns(uint256) {
+        return protocolCut;
+    }
+     
+     function checkIfAddressIsOwner(address _addressToCheck) view public returns(bool) {
+        return (addressToOwnership[_addressToCheck]);
+     }
 }

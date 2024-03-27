@@ -232,4 +232,60 @@ contract HAD_Test is Test {
     homeAwayDraw.payOut();
    }
 
+   function testPayOutRevertsWhenUserTriesClickingMoreThanOnce() public hasBet simulateAwayBet simulateDrawBet simulateHomeBet {
+    vm.startPrank(USER1);
+    homeAwayDraw.payOut();
+    vm.expectRevert(HomeAwayDraw.userHasBeenPaid.selector);
+    homeAwayDraw.payOut();
+   }
+
+   function testOnlyOwnersCanSetResult() public initiateHADContract hasBet simulateAwayBet simulateHomeBet simulateDrawBet {
+    vm.startPrank(USER1);
+    vm.expectRevert(HomeAwayDraw.onlyOwnerCanCallThisFunction.selector);
+    homeAwayDraw.setResult(homeState);
+   }
+
+   function testSetResultWorks() public initiateHADContract {
+    vm.startPrank(INITIAL_DEPLOYER);
+    homeAwayDraw.lockContract();
+    homeAwayDraw.setResult(homeState);
+    assertEq(uint(homeState),uint256(homeAwayDraw.returnResult()));
+   }
+
+   function testSetResultRevertsWhenGameIsNotLocked() initiateHADContract public {
+    vm.startPrank(INITIAL_DEPLOYER);
+    vm.expectRevert(HomeAwayDraw.cantSetResultGameHasNotBeenLocked.selector);
+    homeAwayDraw.setResult(homeState);
+   }
+
+   function testNonOwnersCantSetProtocolCut() initiateHADContract public {
+    vm.startPrank(USER1);
+    vm.expectRevert(HomeAwayDraw.onlyOwnerCanCallThisFunction.selector);
+    homeAwayDraw.setResult(homeState);
+   }
+
+   function testSetProtocolCutRevertsWhenNonOwnersCallIt() public initiateHADContract {
+    vm.startPrank(USER1);
+    vm.expectRevert(HomeAwayDraw.onlyOwnerCanCallThisFunction.selector);
+    homeAwayDraw.setProtocolCut(5);
+   }
+
+   function testSetProtocolCutWorks() public initiateHADContract {
+    vm.startPrank(INITIAL_DEPLOYER);
+    homeAwayDraw.setProtocolCut(5);
+    assertEq(5, homeAwayDraw.returnProtocolCut());
+   }
+
+   function testAddNewOwnerRevertsWithWrongCaller() public initiateHADContract {
+    vm.startPrank(USER1);
+    vm.expectRevert(HomeAwayDraw.onlyOwnerCanCallThisFunction.selector);
+    homeAwayDraw.addNewOwner(USER1);
+   }
+
+   function testAddNewOwnerWorks() public initiateHADContract {
+    vm.startPrank(INITIAL_DEPLOYER);
+    homeAwayDraw.addNewOwner(USER1);
+    assertEq(true, homeAwayDraw.checkIfAddressIsOwner(USER1));
+   }
+
 }

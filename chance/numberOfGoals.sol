@@ -22,7 +22,7 @@ contract NumberOfGoals {
  error cantSetResultGameHasNotBeenLocked();
  error numberOfGoalUserBetOnIsInvalid();
  error thisUserHasBeenPaid();
-
+error invalidAmountPassed();
 /*************EVENTS */
 event betAmountHasIncreased(address _caller, uint256 _newAmount);
 event betHasBeenPlaced(address _caller,uint256 _numberOfGoals, uint256 amount);
@@ -72,7 +72,10 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
     if(userToHasBet[msg.sender] == true) {
         revert youHaveAlreadyPlacedAbet();
     }
-    totalAmountStaked += msg.value - ((protocolCut*msg.value)/100); 
+    if(msg.value <= 0) {
+      revert invalidAmountPassed();
+    }
+    totalAmountStaked += msg.value - ((protocolCut * msg.value)/100);
     userToHasBet[msg.sender] = true;
     userToNumberOfGoals[msg.sender] = _numberOfGoal;
     userToAmountBet[msg.sender] =  msg.value - ((protocolCut*msg.value)/100); 
@@ -93,21 +96,18 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
     }
 
 // modifier to make sure the game has been locked
-    function refund(uint256 _numberOfGoalUserBetOn) public isLocked {
+    function refund() public isLocked {
      if(userToHasBet[msg.sender] != true) {
          revert noBetFound();
-     } else if (_numberOfGoalUserBetOn == userToNumberOfGoals[msg.sender]) {
+     } else {
      userToHasBet[msg.sender] = false;
-     userToAmountBet[msg.sender] = 0;
      totalAmountStaked -= userToAmountBet[msg.sender];
-     numberOfGoalsToTotalAmountOfBet[_numberOfGoalUserBetOn] -= userToAmountBet[msg.sender];
+     numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]] -= userToAmountBet[msg.sender];
      hasBeenPaid[msg.sender] = true;
      payable(msg.sender).transfer(userToAmountBet[msg.sender]);
      emit refundHasBeenMade(msg.sender, userToAmountBet[msg.sender]);
      }
-     else {
-      revert numberOfGoalUserBetOnIsInvalid();
-     }
+    
     }
 
 
@@ -157,5 +157,27 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
    /***************RETURN FUNCTIONS */
    function returnContractName() public view returns(string memory ) {
     return contractName;
+   }
+
+   function returnUserAmountBet() public view returns(uint256) {
+    return userToAmountBet[msg.sender];
+   }
+   function returnTotalAmount() public view returns(uint256) {
+    return totalAmountStaked;
+   }
+   function returnUserToHasBet() public view returns(bool) {
+    return userToHasBet[msg.sender];
+   }
+   function  numberOfGoalUserBetOn() public view returns(uint256) {
+    return userToNumberOfGoals[msg.sender];
+   }
+   function returnNumberOfGoalsToTalAmountBet(uint256 _numberOfGoalToCheck) public view returns(uint256) {
+    return numberOfGoalsToTotalAmountOfBet[_numberOfGoalToCheck];
+   }
+   function returnUserHasBeenPaid()  public view returns(bool){
+    return hasBeenPaid[msg.sender];
+   }
+   function returnUserEtherBalance() public view returns(uint256) {
+    return msg.sender.balance;
    }
 }

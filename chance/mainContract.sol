@@ -14,6 +14,9 @@ address[] public _homeAwayDrawArray;
 CourseWinOrLose courseWinOrLose;
 NumberOfGoals numberOfGoals;
 HomeAwayDraw homeAwayDraw;
+uint256 totalWin;
+uint256 totalBetPlaced;
+
 
 constructor() {
     i_owner = msg.sender;
@@ -86,7 +89,15 @@ function removeOwner(address userAddress) public onlyOwner {
       }
      isOwner[userAddress] = false;
 }
-
+function returnTotalBetPlaced() public view onlyOwner returns(uint256) {
+    return totalBetPlaced;
+}
+function returnTotalAmountOfBetWins() public view returns(uint256) {
+    return totalWin; 
+}
+function addToTotalBetPlaced()  external {
+  totalBetPlaced++;
+}
 //function to determine result
 
 /*RETURN FUNCTION */ 

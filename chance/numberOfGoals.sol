@@ -28,7 +28,7 @@ event betAmountHasIncreased(address _caller, uint256 _newAmount);
 event betHasBeenPlaced(address _caller,uint256 _numberOfGoals, uint256 amount);
 event refundHasBeenMade(address _caller, uint256 _amountPaid);
 event userHaveBeenPaid(address _caller, uint256 _amount );
-event resultHasBeenPaid(address _caller, uint256 amount);
+event resultHasBeenSet(address _caller, uint256 amount);
 event newOwnerAdded(address _caller, address newOwner);
 event protocolCutHasBeenSet(address _caller, uint256 _protocolCut);
 event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
@@ -89,8 +89,8 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
         revert noBetFound();
       }
        totalAmountStaked +=  msg.value - ((protocolCut*msg.value)/100); 
-       userToAmountBet[msg.sender] =  msg.value - ((protocolCut*msg.value)/100); 
-       numberOfGoalsToTotalAmountOfBet[userToAmountBet[msg.sender]] +=  msg.value - ((protocolCut*msg.value)/100); 
+       userToAmountBet[msg.sender] +=  msg.value - ((protocolCut*msg.value)/100); 
+       numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]] +=  msg.value - ((protocolCut*msg.value)/100); 
        emit betAmountHasIncreased(msg.sender, userToAmountBet[msg.sender]);
 
     }
@@ -112,17 +112,18 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
 
 
    function payOut() public  {
-    
     if(userToHasBet[msg.sender] != true) {
-      revert thisUserHasBeenPaid();
+        revert noBetFound();
     }
+ 
     if((contractToNumberOfGoal[address(this)]) == (userToNumberOfGoals[msg.sender])) {
         hasBeenPaid[msg.sender] = true;
         userToHasBet[msg.sender] = false;
         //userToAmountBet[msg.sender] = 0;
         payable(msg.sender).transfer((userToAmountBet[msg.sender]*totalAmountStaked)/ numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]]);
-        emit userHaveBeenPaid(msg.sender,(userToAmountBet[msg.sender]*totalAmountStaked)/ numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]] );
-       
+        emit userHaveBeenPaid(msg.sender,(userToAmountBet[msg.sender]*totalAmountStaked)/ numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]] ); 
+    }else {
+      revert noBetFound();
     }
 
    }
@@ -132,7 +133,7 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
      revert cantSetResultGameHasNotBeenLocked();
      }
      contractToNumberOfGoal[address(this)] = _result;
-     emit resultHasBeenPaid(msg.sender, _result);
+     emit resultHasBeenSet(msg.sender, _result);
      return (_result);
    }
 
@@ -177,5 +178,17 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
    }
    function returnUserEtherBalance() public view returns(uint256) {
     return msg.sender.balance;
+   }
+   function returnResult() public view returns(uint256) {
+    return contractToNumberOfGoal[address(this)];
+   }
+   function checkIsOwner(address _addressToCheck) public view returns(bool) {
+    return owner[_addressToCheck];
+   }
+   function returnProtocolCut() public view returns(uint256) {
+    return protocolCut;
+   }
+   function returnIsGameLocked() public view returns(bool) {
+    return lockGame[address(this)];
    }
 }

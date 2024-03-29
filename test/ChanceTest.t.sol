@@ -348,7 +348,7 @@ courseWinOrLose.refund();
 
 function testRefundWorks() public  {
      vm.startPrank(INITIAL_DEPLOYER);
-    (string memory __contractName, address __contractWOLAddress) = mainContract.create_CWOL_contract(ICEwinsbioChem);
+    //(string memory __contractName, address __contractWOLAddress) = mainContract.create_CWOL_contract(ICEwinsbioChem);
     vm.stopPrank();
     vm.startPrank(USER1);
     console.log(courseWinOrLose.returnUserEtherBalance());

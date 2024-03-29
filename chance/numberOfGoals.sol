@@ -157,7 +157,10 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
     lockGame[address(this)] = true;
     emit contractHasBeenLocked(msg.sender, block.timestamp);
    }
-
+    
+    function changeContractName(string memory _newName) public onlyOwner() {
+    contractName = _newName;
+}
    /***************RETURN FUNCTIONS */
    function returnContractName() public view returns(string memory ) {
     return contractName;

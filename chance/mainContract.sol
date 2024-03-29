@@ -89,6 +89,7 @@ function removeOwner(address userAddress) public onlyOwner {
       }
      isOwner[userAddress] = false;
 }
+
 function returnTotalBetPlaced() public view onlyOwner returns(uint256) {
     return totalBetPlaced;
 }
@@ -110,6 +111,7 @@ function returnTotalPaidWin() private view onlyOwner() returns(uint256){
 function returnTotalLoss() private view onlyOwner() returns(uint256) {
     return(totalBetPlaced-totalWin);
 }
+
 //function to determine result
 
 /*RETURN FUNCTION */ 

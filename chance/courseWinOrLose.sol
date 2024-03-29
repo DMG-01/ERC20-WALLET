@@ -185,6 +185,9 @@ function lockContract() payable public onlyMainOwners {
     thisContractToLock[address(this)] = true;
     emit contractHasBeenLocked(msg.sender, block.timestamp);
 }
+function changeContractName(string memory _newName) public onlyMainOwners() {
+    contractName = _newName;
+}
 
 /*******************RETURN FUNCTIONS  */
 function returnContractName() public view returns(string memory ){

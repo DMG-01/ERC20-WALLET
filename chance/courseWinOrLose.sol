@@ -1,14 +1,12 @@
 //SPDX-License-Identifier: MIT
 //create a function to remove our charges
-
+import {Main} from "chance/mainContract.sol";
 pragma solidity ^0.8.0;
 //why am i makeing it abstract
-//import {Main} from "chance/mainContract.sol; 
-
 
  contract CourseWinOrLose {
      
-
+    Main mainContract;
 
      /**ERRORS */
      error onlyMainOwnerCanCallThisFunction();
@@ -106,6 +104,7 @@ pragma solidity ^0.8.0;
     // Mark the user as having placed a bet
     usersToBet[msg.sender] = _bet;
     addressToHasUserBet[msg.sender] = true;
+    mainContract.addToTotalBetPlaced();
 }
 
 function addToBet() public payable hasContractBeenLocked {
@@ -133,6 +132,7 @@ function payOut() payable public _hasBeenPaid {
     if( (thisContractToResult[address(this)] == true) && (usersToBet[msg.sender] = true)){
         hasBeenPaid[msg.sender] = true;
         payable(msg.sender).transfer(((addressToAmountPlaced[msg.sender])* total )/_totalBetFor);
+        mainContract.addToTotalWin();
         emit payOutHasBeenMade(msg.sender, ((addressToAmountPlaced[msg.sender])* total )/_totalBetFor);
        
     } else {
@@ -177,6 +177,7 @@ function refund() payable public hasContractBeenLocked  _hasBeenPaid {
     addressToHasUserBet[msg.sender] = false;
     hasBeenPaid[msg.sender] = true;
     payable(msg.sender).transfer(addressToAmountPlaced[msg.sender]);
+    mainContract.removeToTalBetPlaced();
     emit refundHasBeenMade(msg.sender, addressToAmountPlaced[msg.sender]);
 }
 

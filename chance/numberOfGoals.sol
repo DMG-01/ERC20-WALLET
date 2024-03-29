@@ -1,8 +1,11 @@
 //SPDX-License-Identifier:MIT
 
 pragma solidity ^ 0.8.0;
+import {Main} from "chance/mainContract.sol";
 
 contract NumberOfGoals {
+
+  Main mainContract;
 
     /************MAPPING  *****/
   mapping(address=>uint256)  userToNumberOfGoals;
@@ -81,6 +84,7 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
     userToAmountBet[msg.sender] =  msg.value - ((protocolCut*msg.value)/100); 
     numberOfGoalsToTotalAmountOfBet[_numberOfGoal] += msg.value - ((protocolCut*msg.value)/100); 
     hasBeenPaid[msg.sender] = false;
+    mainContract.addToTotalBetPlaced();
     emit betHasBeenPlaced(msg.sender,_numberOfGoal, msg.value);
     }
 
@@ -105,6 +109,7 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
      numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]] -= userToAmountBet[msg.sender];
      hasBeenPaid[msg.sender] = true;
      payable(msg.sender).transfer(userToAmountBet[msg.sender]);
+     mainContract.removeToTalBetPlaced();
      emit refundHasBeenMade(msg.sender, userToAmountBet[msg.sender]);
      }
     
@@ -119,8 +124,8 @@ event contractHasBeenLocked(address _caller, uint256 timeOfFunctionCall);
     if((contractToNumberOfGoal[address(this)]) == (userToNumberOfGoals[msg.sender])) {
         hasBeenPaid[msg.sender] = true;
         userToHasBet[msg.sender] = false;
-        //userToAmountBet[msg.sender] = 0;
         payable(msg.sender).transfer((userToAmountBet[msg.sender]*totalAmountStaked)/ numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]]);
+        mainContract.addToTotalWin();
         emit userHaveBeenPaid(msg.sender,(userToAmountBet[msg.sender]*totalAmountStaked)/ numberOfGoalsToTotalAmountOfBet[userToNumberOfGoals[msg.sender]] ); 
     }else {
       revert noBetFound();

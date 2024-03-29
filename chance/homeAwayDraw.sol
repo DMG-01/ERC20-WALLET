@@ -1,9 +1,9 @@
 //SPDX-License-Identifier:MIT
 
 pragma solidity^0.8.0;
-
+import {Main} from "chance/mainContract.sol";
 contract HomeAwayDraw {
-
+     Main mainContract;
     address i_owner;
     string contractName;
     uint256 protocolCut = 1;
@@ -104,6 +104,7 @@ contract HomeAwayDraw {
      totalBetAmount += msg.value - ((protocolCut * msg.value)/100);
      hasBet[msg.sender] = true;
      beenPaid[msg.sender] = false;
+     mainContract.addToTotalBetPlaced();
      emit newBetHasBeenPlaced(msg.sender,_state,userToAmountBet[msg.sender]);
     }
 
@@ -126,6 +127,7 @@ contract HomeAwayDraw {
       hasBet[msg.sender] = false;
       beenPaid[msg.sender] = true;
       payable(msg.sender).transfer(userToAmountBet[msg.sender]);
+      mainContract.removeToTalBetPlaced();
       emit refundHasBeenMade(msg.sender,userToAmountBet[msg.sender]);
     }
 
@@ -138,6 +140,7 @@ contract HomeAwayDraw {
           hasBet[msg.sender] = false;
           beenPaid[msg.sender] = true;
           payable(msg.sender).transfer((userToAmountBet[msg.sender] * totalBetAmount) / StateToTotalAmountBet[userToState[msg.sender]]);
+          mainContract.addToTotalWin();
           emit userHaveBeenPaid(msg.sender, (userToAmountBet[msg.sender] * totalBetAmount) / StateToTotalAmountBet[userToState[msg.sender]]); 
        }
        else{

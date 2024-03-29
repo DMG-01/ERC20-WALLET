@@ -98,6 +98,18 @@ function returnTotalAmountOfBetWins() public view returns(uint256) {
 function addToTotalBetPlaced()  external {
   totalBetPlaced++;
 }
+function removeToTalBetPlaced() external {
+    totalBetPlaced--;
+}
+function addToTotalWin() external {
+    totalWin++;
+}
+function returnTotalPaidWin() private view onlyOwner() returns(uint256){
+    return totalWin;
+}
+function returnTotalLoss() private view onlyOwner() returns(uint256) {
+    return(totalBetPlaced-totalWin);
+}
 //function to determine result
 
 /*RETURN FUNCTION */ 

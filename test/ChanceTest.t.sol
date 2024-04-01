@@ -259,6 +259,7 @@ function testAddToBetRevertsWithZeroAmountPassed() public betPlacedFor {
 vm.startPrank(USER1);
 vm.expectRevert(CourseWinOrLose.invalidAmountPassed.selector);
 courseWinOrLose.addToBet{value:0}();
+vm.stopPrank();
 }
 
 function testPayOutWouldRevertWhenScoresHaveNotBeenAdded() public betPlacedFor simulateBetAgainst simulateBetFor {

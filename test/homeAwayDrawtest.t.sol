@@ -44,28 +44,28 @@ contract HAD_Test is Test {
    }
 
    modifier hasBet() {
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     homeAwayDraw.bet{value:BET_AMOUNT}(homeState);
     _;
    }
 
    modifier simulateHomeBet() {
-    vm.prank(USER2);
+    vm.startPrank(USER2);
      homeAwayDraw.bet{value:USER2_BET_AMOUNT}(homeState);
     _;
    }
    modifier simulateAwayBet() {
-    vm.prank(USER3);
+    vm.startPrank(USER3);
      homeAwayDraw.bet{value:USER3_BET_AMOUNT}(awayState);
-     vm.prank(USER4);
+     vm.startPrank(USER4);
      homeAwayDraw.bet{value:USER4_BET_AMOUNT}(awayState);
     _;
    }
 
    modifier simulateDrawBet() {
-    vm.prank(USER5);
+    vm.startPrank(USER5);
      homeAwayDraw.bet{value:USER5_BET_AMOUNT}(drawState);
-     vm.prank(USER6);
+     vm.startPrank(USER6);
      homeAwayDraw.bet{value:USER6_BET_AMOUNT}(drawState);
     _;
    }
@@ -100,9 +100,9 @@ contract HAD_Test is Test {
         assertEq(true, hasUserBet);
     }
     function testBetRevertsWhenContractHasBeenLocked() initiateHADContract public {
-        vm.prank(INITIAL_DEPLOYER);
+        vm.startPrank(INITIAL_DEPLOYER);
         homeAwayDraw.lockContract();
-        vm.prank(USER1);
+        vm.startPrank(USER1);
         vm.expectRevert(HomeAwayDraw.gameHasBeenLocked.selector);
         homeAwayDraw.bet{value:BET_AMOUNT}(homeState);
     }
@@ -144,20 +144,20 @@ contract HAD_Test is Test {
     }
 
     function testAddToBetRevertsWhenZeroIsPassed() public hasBet initiateHADContract {
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     vm.expectRevert(HomeAwayDraw.invalidAmountPassed.selector);
     homeAwayDraw.addToBet{value:0}();
 }
     function testAddToBetRevertsWhenUserHasNotBet() public {
-        vm.prank(USER1);
+        vm.startPrank(USER1);
         vm.expectRevert(HomeAwayDraw.userHasNotPlacedAbet.selector);
         homeAwayDraw.addToBet{value:0}();
     }
 
     function testAddBetRevertsWhenContractIsLocked() public hasBet initiateHADContract {
-        vm.prank(INITIAL_DEPLOYER);
+        vm.startPrank(INITIAL_DEPLOYER);
         homeAwayDraw.lockContract();
-        vm.prank(USER1);
+        vm.startPrank(USER1);
         vm.expectRevert(HomeAwayDraw.gameHasBeenLocked.selector);
         homeAwayDraw.addToBet{value:BET_AMOUNT}();
     }
@@ -171,7 +171,7 @@ contract HAD_Test is Test {
     }
 
     function testRefundRevertsWhenPlayerDidntBet() public initiateHADContract {
-        vm.prank(USER1);
+        vm.startPrank(USER1);
         vm.expectRevert(HomeAwayDraw.noBetWasFound.selector);
         homeAwayDraw.refund();
     }
@@ -184,9 +184,9 @@ contract HAD_Test is Test {
     }
 
     function testRefundRevertsWhenContractHasBeenLocked() public initiateHADContract hasBet {
-        vm.prank(INITIAL_DEPLOYER);
+        vm.startPrank(INITIAL_DEPLOYER);
         homeAwayDraw.lockContract();
-        vm.prank(USER1);
+        vm.startPrank(USER1);
         vm.expectRevert(HomeAwayDraw.gameHasBeenLocked.selector);
         homeAwayDraw.refund();
     }

@@ -77,9 +77,9 @@ contract numberOfGoals is Test {
       numberOfGoal.betNumberOfGoals(USER1_BET_AMOUNT);
     }
     function testBetWouldRevertWhenContractHasBeenLocked() public initiateNumberOfGoals {
-        vm.prank(INITIAL_DEPLOYER);
+        vm.startPrank(INITIAL_DEPLOYER);
         numberOfGoal.setLockGame();
-        vm.prank(USER1);
+        vm.startPrank(USER1);
         vm.expectRevert(NumberOfGoals.gameHasBeenLocked.selector);
         numberOfGoal.betNumberOfGoals{value:USER1_BET_AMOUNT}(USER1_BET_AMOUNT);
     }
@@ -95,9 +95,9 @@ contract numberOfGoals is Test {
     }
 
     function testRefundRevertsWhenContractHasBeenLocked() public initiateNumberOfGoals placeBet {
-        vm.prank(INITIAL_DEPLOYER);
+        vm.startPrank(INITIAL_DEPLOYER);
         numberOfGoal.setLockGame();
-        vm.prank(USER1);
+        vm.startPrank(USER1);
         vm.expectRevert(NumberOfGoals.gameHasBeenLocked.selector);
         numberOfGoal.refund();
     }
@@ -172,12 +172,12 @@ contract numberOfGoals is Test {
     }
 
     function testSetResultRevertsWhenNonOnwerCallIt() public placeBet initiateNumberOfGoals {
-     vm.prank(USER1);
+     vm.startPrank(USER1);
      vm.expectRevert(NumberOfGoals.onlyOwnerCanCallThisFunction.selector);
      numberOfGoal.setResult(USER1_NOG_BET);
     }
     function testSetResultRevertsWhenGameIsNotLocked() public placeBet initiateNumberOfGoals {
-        vm.prank(INITIAL_DEPLOYER);
+        vm.startPrank(INITIAL_DEPLOYER);
         vm.expectRevert(NumberOfGoals.cantSetResultGameHasNotBeenLocked.selector);
         numberOfGoal.setResult(USER1_NOG_BET);
     }
@@ -189,7 +189,7 @@ contract numberOfGoals is Test {
     }
 
     function testSetNewOwnerRevertsWhenNonCallerCalls() public placeBet initiateNumberOfGoals {
-        vm.prank(USER1);
+        vm.startPrank(USER1);
          vm.expectRevert(NumberOfGoals.onlyOwnerCanCallThisFunction.selector);
         numberOfGoal.setNewOwner(USER2);
     }
@@ -201,7 +201,7 @@ contract numberOfGoals is Test {
     }
 
     function testSetProtocolCutRevertsWithWrongCaller() public placeBet initiateNumberOfGoals {
-        vm.prank(USER1);
+        vm.startPrank(USER1);
          vm.expectRevert(NumberOfGoals.onlyOwnerCanCallThisFunction.selector);
         numberOfGoal.setProtocolCut(5);
 }
@@ -212,7 +212,7 @@ contract numberOfGoals is Test {
     }
 
     function testSetLockGameRevertsWithWrongCaller() public initiateNumberOfGoals {
-        vm.prank(USER1);
+        vm.startPrank(USER1);
          vm.expectRevert(NumberOfGoals.onlyOwnerCanCallThisFunction.selector);
         numberOfGoal.setLockGame();
 }
@@ -224,14 +224,14 @@ contract numberOfGoals is Test {
   }
 
   function testAddToBetRevertsWhenContractIsLocked() public placeBet  initiateNumberOfGoals {
-    vm.prank(INITIAL_DEPLOYER);
+    vm.startPrank(INITIAL_DEPLOYER);
     numberOfGoal.setLockGame();
     vm.expectRevert(NumberOfGoals.gameHasBeenLocked.selector);
     numberOfGoal.addToBetAmount{value:USER1_BET_AMOUNT}();
   }
 
   function testAddToBetRevertsWhenNoBetIsFound() public initiateNumberOfGoals {
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     vm.expectRevert(NumberOfGoals.noBetFound.selector);
     numberOfGoal.addToBetAmount{value:USER1_BET_AMOUNT}();
   }

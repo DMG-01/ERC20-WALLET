@@ -123,9 +123,9 @@ function testAddOwnerWorks() public {
 }
 
 function testAddTwoOnwersWork() public {
-    vm.prank(INITIAL_DEPLOYER);
+    vm.startPrank(INITIAL_DEPLOYER);
     mainContract.addOwner(USER1);
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     mainContract.addOwner(USER2);
     uint256 actualLength = mainContract.returnLengthOfOwnersArray();
     assertEq(actualLength, 3);
@@ -178,9 +178,9 @@ function testCanRemoveOwner() public {
 }
 
 function testCantRemoveInitialDeployer() public {
-    vm.prank(INITIAL_DEPLOYER);
+    vm.startPrank(INITIAL_DEPLOYER);
     mainContract.addOwner(USER1);
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     vm.expectRevert(Main.youCantRemoveThisUser.selector);
     mainContract.removeOwner(INITIAL_DEPLOYER);
 }
@@ -362,9 +362,9 @@ function testRefundWorks() public  {
 }
 
 function testRefundRevertsWhenContractHasBeenLocked() public betPlacedFor initiateCWOL{
-vm.prank(INITIAL_DEPLOYER);
+vm.startPrank(INITIAL_DEPLOYER);
 courseWinOrLose.lockContract();
-vm.prank(USER1);
+vm.startPrank(USER1);
 vm.expectRevert(CourseWinOrLose.thisContractHasBeenLocked.selector);
 courseWinOrLose.refund();
 } 
@@ -381,7 +381,7 @@ vm.startPrank(INITIAL_DEPLOYER);
 courseWinOrLose.lockContract();
 courseWinOrLose.setResult(true);
 vm.stopPrank();
-vm.prank(USER1);
+vm.startPrank(USER1);
 vm.expectRevert(CourseWinOrLose.thisContractHasBeenLocked.selector);
 courseWinOrLose.refund();
 }
@@ -391,19 +391,19 @@ vm.startPrank(INITIAL_DEPLOYER);
 courseWinOrLose.lockContract();
 courseWinOrLose.setResult(true);
 vm.stopPrank();
-vm.prank(USER1);
+vm.startPrank(USER1);
 vm.expectRevert(CourseWinOrLose.thisContractHasBeenLocked.selector);
 courseWinOrLose.bet{value:BET_AMOUNT}(true);
 }
 
 function testNonOwnersCantLockContract() public initiateCWOL {
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     vm.expectRevert(CourseWinOrLose.onlyMainOwnerCanCallThisFunction.selector);
     courseWinOrLose.lockContract();
 }
 
 function testAddToBetRevertsWhenNoBetIsFound() public initiateCWOL {
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     vm.expectRevert(CourseWinOrLose.noBetWasFound.selector);
     courseWinOrLose.addToBet{value:BET_AMOUNT}();
 }

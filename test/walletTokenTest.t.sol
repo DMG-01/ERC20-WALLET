@@ -190,7 +190,7 @@ function setUp() public {
     wallet.sendToken(wbtcAddress,AMOUNT_TO_SEND,USER1);
     uint256 actualUSERBalance = wallet.getUserTokenBalance(wbtcAddress); 
     vm.stopPrank();
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     uint256 actualUSER1Balance = wallet.getUserTokenBalance(wbtcAddress);
     assertEq(actualUSERBalance,actualUSER1Balance);
     console.log(actualUSERBalance);
@@ -292,23 +292,23 @@ function testSwapTokenInitiatorRevertsWhenCallerHasInsufficientFund() public fun
 
   
   function testSecondUserConfirmationWouldRevertWithDifferentParameter() public fundAccountWithWeth fundUSER2WithWbtc {
-    vm.prank(USER);
+    vm.startPrank(USER);
     wallet.swapTokenInitiator(USER_TOKEN_TO_SWAP,USER2_TOKEN_TO_SWAP,wethAddress,wbtcAddress,USER2);
-    vm.prank(USER2);
+    vm.startPrank(USER2);
     vm.expectRevert(Wallet.parametersDontMatch.selector);
     wallet.secondUserConfirmation(USER_TOKEN_TO_SWAP,USER2_TOKEN_TO_SWAP,wbtcAddress,wbtcAddress,USER);
   }
   
       function testSecondUserTokenWouldRevertWithInsufficientBalance() public fundAccountWithWeth fundAccountWithWbtc {
-    vm.prank(USER);
+    vm.startPrank(USER);
        wallet.swapTokenInitiator(USER_TOKEN_TO_SWAP,EXCESS_AMOUNT,wethAddress,wbtcAddress,USER2);
-    vm.prank(USER1);
+    vm.startPrank(USER1);
     vm.expectRevert(Wallet.InsufficientBalance.selector);
     wallet.secondUserConfirmation(USER_TOKEN_TO_SWAP,EXCESS_AMOUNT,wethAddress,wbtcAddress,USER);
   }
 
   function testSwapTokenWorks() public fundAccountWithWeth fundUSER2WithWbtc{
-    vm.prank(USER);
+    vm.startPrank(USER);
      wallet.swapTokenInitiator(USER_TOKEN_TO_SWAP,USER2_TOKEN_TO_SWAP,wethAddress,wbtcAddress,USER2);
     vm.startPrank(USER2);
     wallet.secondUserConfirmation(USER_TOKEN_TO_SWAP,USER2_TOKEN_TO_SWAP,wethAddress,wbtcAddress,USER);

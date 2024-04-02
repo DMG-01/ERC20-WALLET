@@ -1,3 +1,3 @@
 // add a msg.sender
 // add a withdraw function to remove all the protocol cut 
-//  
+ add or make the owners public in each contract

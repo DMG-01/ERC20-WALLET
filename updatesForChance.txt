@@ -1,3 +1,5 @@
 // add a msg.sender
 // add a withdraw function to remove all the protocol cut 
  add or make the owners public in each contract
+ modify the remove owners from the control contract
+ // adjust the bet code to make it gas efficiency

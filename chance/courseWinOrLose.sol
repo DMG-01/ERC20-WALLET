@@ -134,7 +134,6 @@ function payOut() payable public _hasBeenPaid {
         payable(msg.sender).transfer(((addressToAmountPlaced[msg.sender])* total )/_totalBetFor);
         mainContract.addToTotalWin();
         emit payOutHasBeenMade(msg.sender, ((addressToAmountPlaced[msg.sender])* total )/_totalBetFor);
-       
     } else {
         revert youCantWithdraw();//change to you cant withdraw
     }

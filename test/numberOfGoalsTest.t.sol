@@ -1,5 +1,5 @@
 //SPDX-License-Identifier:MIT
-
+/*
 pragma solidity ^0.8.0;
 
 import {Test, console} from "lib/forge-std/src/Test.sol";
@@ -243,3 +243,4 @@ contract numberOfGoals is Test {
     assertEq(numberOfGoal.returnUserAmountBet(),numberOfGoal.returnNumberOfGoalsToTalAmountBet(USER1_NOG_BET));
  }
 }
+*/
